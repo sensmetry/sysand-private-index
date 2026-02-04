@@ -1,0 +1,51 @@
+{
+  "name": "test-sysand-package",
+  "description": "This is an example SysML v2 Model Interchange Project to show off private index functionality.",
+  "version": "0.0.1",
+  "license": "CC0-1.0",
+  "maintainer": [
+    "Sensmetry"
+  ],
+  "usage": [
+    {
+      "resource": "urn:kpar:semantic-library",
+      "versionConstraint": "^1.0.0"
+    },
+    {
+      "resource": "urn:kpar:data-type-library",
+      "versionConstraint": "^1.0.0"
+    },
+    {
+      "resource": "urn:kpar:function-library",
+      "versionConstraint": "^1.0.0"
+    },
+    {
+      "resource": "urn:kpar:systems-library",
+      "versionConstraint": "^2.0.0"
+    },
+    {
+      "resource": "urn:kpar:analysis-library",
+      "versionConstraint": "^2.0.0"
+    },
+    {
+      "resource": "urn:kpar:cause-and-effect-library",
+      "versionConstraint": "^2.0.0"
+    },
+    {
+      "resource": "urn:kpar:geometry-library",
+      "versionConstraint": "^2.0.0"
+    },
+    {
+      "resource": "urn:kpar:metadata-library",
+      "versionConstraint": "^2.0.0"
+    },
+    {
+      "resource": "urn:kpar:quantities-and-units-library",
+      "versionConstraint": "^2.0.0"
+    },
+    {
+      "resource": "urn:kpar:requirement-derivation-library",
+      "versionConstraint": "^2.0.0"
+    }
+  ]
+}
