@@ -1,0 +1,52 @@
+{
+  "versions": [
+    {
+      "version": "0.0.1",
+      "usage": [
+        {
+          "resource": "https://www.omg.org/spec/KerML/20250201/Semantic-Library.kpar",
+          "versionConstraint": "^1.0.0"
+        },
+        {
+          "resource": "https://www.omg.org/spec/KerML/20250201/Data-Type-Library.kpar",
+          "versionConstraint": "^1.0.0"
+        },
+        {
+          "resource": "https://www.omg.org/spec/KerML/20250201/Function-Library.kpar",
+          "versionConstraint": "^1.0.0"
+        },
+        {
+          "resource": "https://www.omg.org/spec/SysML/20250201/Systems-Library.kpar",
+          "versionConstraint": "^2.0.0"
+        },
+        {
+          "resource": "https://www.omg.org/spec/SysML/20250201/Analysis-Domain-Library.kpar",
+          "versionConstraint": "^2.0.0"
+        },
+        {
+          "resource": "https://www.omg.org/spec/SysML/20250201/Cause-and-Effect-Domain-Library.kpar",
+          "versionConstraint": "^2.0.0"
+        },
+        {
+          "resource": "https://www.omg.org/spec/SysML/20250201/Geometry-Domain-Library.kpar",
+          "versionConstraint": "^2.0.0"
+        },
+        {
+          "resource": "https://www.omg.org/spec/SysML/20250201/Metadata-Domain-Library.kpar",
+          "versionConstraint": "^2.0.0"
+        },
+        {
+          "resource": "https://www.omg.org/spec/SysML/20250201/Quantities-and-Units-Domain-Library.kpar",
+          "versionConstraint": "^2.0.0"
+        },
+        {
+          "resource": "https://www.omg.org/spec/SysML/20250201/Requirement-Derivation-Domain-Library.kpar",
+          "versionConstraint": "^2.0.0"
+        }
+      ],
+      "project_digest": "sha256:584f087b3055b850923a10873116c8af5fdedd9a154dc409db4d88cde946d9a2",
+      "kpar_size": 3730,
+      "kpar_digest": "sha256:1843de576a475fdaf3fa6b9b6a8c43e5291547a79e51d776267993f2224568f0"
+    }
+  ]
+}
