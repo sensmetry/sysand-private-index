@@ -19,18 +19,17 @@ it for their needs (e.g. adding quality gates).
 > not be ideal.
 
 The URL of the index will look something like this:
-`https://raw.githubusercontent.com/OWNER/REPO/refs/heads/main/`
+`https://raw.githubusercontent.com/OWNER/REPO/refs/heads/BRANCH/index/`
 
 ## How this works
 
-The index are just files in a GitHub repository. GitHub is just used to host
-the files with authentication.
+The index are just files in a GitHub repository `index` directory. GitHub is just used to host the directory with authentication.
 
 ## Deployment workflow
 
 1. Go to index directory (`cd index`) - this is the package index root.
 2. Add a `.kpar` to the index by following [Add Project to Index](https://docs.sysand.org/hosting_index.html#add-project-to-the-index).
-3. Commit and push the changes to the `main` branch.
+3. Commit and push the changes to a branch (referred to as `BRANCH` throughout)
 
 ## Using workflow
 
@@ -41,15 +40,15 @@ the files with authentication.
 2. Create a `.env` file or use other means to set the following environment
    variables. For `<X>` you can use whatever you want.
     - `SYSAND_CRED_<X>` with the value
-      `https://raw.githubusercontent.com/OWNER/REPO/refs/heads/main/**` (the
-      `refs/heads/main/**` part is important!)
+      `https://raw.githubusercontent.com/OWNER/REPO/refs/heads/BRANCH/index/**` (the
+      `refs/heads/BRANCH/index/**` part is important!)
     - `SYSAND_CRED_<X>_BEARER_TOKEN` with the value set to the Personal Access
       Token generated in step 1.
     - For more information about how Sysand deals with Authentication, refer to
       [Sysand documentation](https://docs.sysand.org/authentication.html).
     - An example `.env.example` file is provided in this repo.
 3. Use the `--index` Sysand CLI argument with the value of
-   `https://raw.githubusercontent.com/OWNER/REPO/refs/heads/main/` when
+   `https://raw.githubusercontent.com/OWNER/REPO/refs/heads/BRANCH/index/` when
    installing the packages from this index OR use `sysand.toml` config file with
    the index set there.
     - For more information about how to set up Sysand to use custom indices,
@@ -57,14 +56,9 @@ the files with authentication.
       documentation](https://docs.sysand.org/config/indexes.html).
     - An example `sysand.toml` config file is provided in this repo.
 
-## First time setup
+## Don't forget
 
-You need to set up a GitHub repo as follows:
-
-- Commit anything to the `main` branch.
-- Push the `main` branch to GitHub.
-
-Don't forget to update the `OWNER/REPO` parts of the `raw.githubusercontent.com`
+Don't forget to update the `OWNER/REPO` and `BRANCH` parts of the `raw.githubusercontent.com`
 URLs in this `README.md`, [`.env.example`](.env.example), and
 [`sysand.toml`](sysand.toml) files, to make it easier for your colleagues to
 access the index URL.
