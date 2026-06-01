@@ -19,47 +19,17 @@ it for their needs (e.g. adding quality gates).
 > not be ideal.
 
 The URL of the index will look something like this:
-`https://raw.githubusercontent.com/OWNER/REPO/refs/heads/index/`
+`https://raw.githubusercontent.com/OWNER/REPO/refs/heads/BRANCH/index/`
 
-![Operating Principle](operating_principle.png)
+## How this works
+
+The index are just files in a GitHub repository `index` directory. GitHub is just used to host the directory with authentication.
 
 ## Deployment workflow
 
-1. Commit to `main` with `.kpar` file added to the `packages/<project>/` folder.
-   - The internal package registry uses the `urn:kpar:` + the `name` field from
-     `.project.json` for the IRI.
-   - Thus, to make referencing the package easier, the `name` **shall** be
-     ASCII-only, with no spaces (`-` strongly encouraged to be used in place of
-     the space), lowercase-only, and no longer than 32 characters. Other rules
-     can be set up internally, but then the CI workflow needs to be adjusted to
-     account for that (e.g. if allowing spaces in the name).
-   - The `<project>` folder **should** be called the same as the `name` for
-     easier file discovery in the repo itself, but otherwise there is no strict
-     rule.
-   - The name of the `.kpar` file does not matter, but it is strongly suggested
-     for it to have a version number inside it, so that if there are multiple
-     versions of the same project, the `.kpar`s do not overwrite each other
-     accidentally.
-2. When commit lands on `main`, a new workflow starts that:
-    1. Uses Sysand to create an environment ([`sysand
-       env`](https://docs.sysand.org/commands/env.html))
-    2. Uses Sysand to install all `.kpar`s from `packages/**` folder ([`sysand
-       env install --path /path/to/kpar --no-deps --allow-multiple <IRI as
-       described in step
-       1.>`](https://docs.sysand.org/commands/env/install.html))
-    3. Copies all contents of `sysand_env` folder to `index` folder and saves
-       the index folder as an artifact
-    4. Checks out the `index` branch, `git reset --hard`s to a commit that made
-       the `index` branch have no files.
-    5. Extracts the `index` contents from the build artifact.
-    6. `git add`s all the contents, commits the changes with `Publish Index`
-       commit, and **force** pushes \* to `index` branch.
-
-_\* NOTE:_ Force pushing is used to avoid making the git repo size from
-exploding with each commit. Additionally, the `index` branch should not be used
-by humans, and it only contains the automatically generated artifacts. Ideally,
-the branch should be protected and only the bot account should be able to push
-to it.
+1. Go to index directory (`cd index`) - this is the package index root.
+2. Add a `.kpar` to the index by following [Add Project to Index](https://docs.sysand.org/hosting_index.html#add-project-to-the-index).
+3. Commit and push the changes to a branch (referred to as `BRANCH` throughout)
 
 ## Using workflow
 
@@ -70,15 +40,15 @@ to it.
 2. Create a `.env` file or use other means to set the following environment
    variables. For `<X>` you can use whatever you want.
     - `SYSAND_CRED_<X>` with the value
-      `https://raw.githubusercontent.com/OWNER/REPO/refs/heads/index/**` (the
-      `refs/heads/index/**` part is important!)
+      `https://raw.githubusercontent.com/OWNER/REPO/refs/heads/BRANCH/index/**` (the
+      `refs/heads/BRANCH/index/**` part is important!)
     - `SYSAND_CRED_<X>_BEARER_TOKEN` with the value set to the Personal Access
       Token generated in step 1.
     - For more information about how Sysand deals with Authentication, refer to
       [Sysand documentation](https://docs.sysand.org/authentication.html).
     - An example `.env.example` file is provided in this repo.
 3. Use the `--index` Sysand CLI argument with the value of
-   `https://raw.githubusercontent.com/OWNER/REPO/refs/heads/index/` when
+   `https://raw.githubusercontent.com/OWNER/REPO/refs/heads/BRANCH/index/` when
    installing the packages from this index OR use `sysand.toml` config file with
    the index set there.
     - For more information about how to set up Sysand to use custom indices,
@@ -86,26 +56,9 @@ to it.
       documentation](https://docs.sysand.org/config/indexes.html).
     - An example `sysand.toml` config file is provided in this repo.
 
-## First time setup
+## Don't forget
 
-You need to set up a GitHub repo as follows:
-
-- Commit anything to the `main` branch.
-- Push the `main` branch to GitHub.
-- Create an `index` branch from the initial commit.
-- Delete **all** files from the repo, and commit the deletion to the `index`
-  branch (blue circle in the above diagram).
-- Note down the SHA of the deletion commit.
-- Push the `index` branch to GitHub.
-- Check out `main` branch again.
-- Enter that SHA into the [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
-  file, line 54 (the one with `git reset --hard`).
-- Commit and push the SHA change.
-- You should be good to go! Whenever you add a `.kpar` file to the `packages`
-  folder, the CI should trigger and the package should become available through
-  [`sysand add`](https://docs.sysand.org/commands/add.html) or `sysand clone`.
-
-Don't forget to update the `OWNER/REPO` parts of the `raw.githubusercontent.com`
+Don't forget to update the `OWNER/REPO` and `BRANCH` parts of the `raw.githubusercontent.com`
 URLs in this `README.md`, [`.env.example`](.env.example), and
 [`sysand.toml`](sysand.toml) files, to make it easier for your colleagues to
 access the index URL.

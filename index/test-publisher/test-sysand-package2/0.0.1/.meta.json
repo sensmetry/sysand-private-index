@@ -1,0 +1,14 @@
+{
+  "index": {
+    "TestPackage": "myTestFile.sysml",
+    "TestPackage2": "myTestFile.sysml"
+  },
+  "created": "2026-02-04T15:00:48.194691000Z",
+  "metamodel": "https://www.omg.org/spec/SysML/20250201",
+  "checksum": {
+    "myTestFile.sysml": {
+      "value": "1b4129478cec61117f498e5d4ea384a89af3b80f6b32ef09e2cc571420beb4b8",
+      "algorithm": "SHA256"
+    }
+  }
+}

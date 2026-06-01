@@ -1,0 +1,10 @@
+{
+  "projects": [
+    {
+      "iri": "pkg:sysand/test-publisher/test-sysand-package1"
+    },
+    {
+      "iri": "pkg:sysand/test-publisher/test-sysand-package2"
+    }
+  ]
+}
