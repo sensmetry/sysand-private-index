@@ -37,11 +37,10 @@ Publishing is done by adding your project's `.kpar` file (produced by
 `sysand build`) to this repository through a pull request. The automation
 takes care of everything else.
 
-1. Clone this repository's `staging` branch and create a branch for your
-   submission:
+1. Clone this repository and create a branch for your submission:
 
    ```sh
-   git clone -b staging git@github.com:YOUR-ORG/YOUR-INDEX.git && cd YOUR-INDEX
+   git clone git@github.com:YOUR-ORG/YOUR-INDEX.git && cd YOUR-INDEX
    git switch -c submit/my-project-1.0.0
    ```
 
@@ -55,8 +54,7 @@ takes care of everything else.
    Everything about your project (publisher, name, version) is read from
    the file itself.
 
-3. Commit, push, and open a pull request **targeting the `staging`
-   branch**:
+3. Commit, push, and open a pull request:
 
    ```sh
    git add inbox && git commit -m "submit: my-team/my-project 1.0.0"

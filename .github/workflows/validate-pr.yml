@@ -1,10 +1,10 @@
 name: validate-submission
-# Fast feedback on PRs targeting staging: validates each submission and
+# Fast feedback on pull requests: validates each submission and
 # posts a report of what the KPAR contains, so reviewers see exactly what
-# is being added. The writer re-validates after merge.
+# is being added. Runs only when a PR touches inbox/.
 on:
   pull_request:
-    branches: [staging]
+    branches: [main]
 
 jobs:
   validate:

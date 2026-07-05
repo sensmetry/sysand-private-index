@@ -1,9 +1,10 @@
 name: index-writer
-# The writer: triggered by pushes to staging, serialized by the concurrency
-# group, and the only thing that writes to main.
+# The writer: runs on every push to main, publishes inbox/ submissions to
+# the generated `index` branch, then clears the inbox. Serialized by the
+# concurrency group. No-ops when the inbox is empty.
 on:
   push:
-    branches: [staging]
+    branches: [main]
 
 concurrency:
   group: index-writer
@@ -13,11 +14,10 @@ jobs:
   process-inbox:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # lets the job push to main and staging
+      contents: write # lets the job push to the index branch and clear inbox/
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: staging
           fetch-depth: 0
 
       - uses: actions/setup-python@v6

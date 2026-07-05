@@ -2,17 +2,19 @@
 """CI logic for this private sysand index.
 
 Subcommands:
-  process-inbox     The writer: publish inbox/ entries from the staging
-                    branch into the index of record, then clear them.
-  validate BASEREF  Pre-merge validation for MRs/PRs targeting staging.
+  process-inbox     The writer: publish inbox/ entries into the generated
+                    index branch, then clear them from the source branch.
+  validate BASEREF  Pre-merge validation for MRs/PRs.
                     Writes kpar-report.md describing every submission so
                     reviewers see exactly what is being added (CI posts it
                     on the PR/MR).
 
 A submission is a KPAR file exactly as `sysand build` produced it, placed
-directly in inbox/. The project's identity — publisher, name, version —
-comes from the KPAR's own metadata. Review on the staging branch is the
-publishing gate: what reviewers approve gets published.
+directly in inbox/ on the default branch. The project's identity —
+publisher, name, version — comes from the KPAR's own metadata. Review of
+the pull/merge request is the publishing gate: what reviewers approve gets
+published. The writer publishes into the generated, writer-only index
+branch and then clears the inbox.
 
 Invariants:
 - The writer runs serialized (GitHub `concurrency:` / GitLab `resource_group`).
@@ -21,7 +23,7 @@ Invariants:
 - Published versions are immutable: the writer only ever adds.
 
 Requires: Python >= 3.11, git, sysand on PATH.
-Expects: cwd = repo root, checkout of the staging branch tip, push
+Expects: cwd = repo root, checkout of the source branch tip, push
 credentials configured on the remote.
 """
 
@@ -38,8 +40,8 @@ import zipfile
 from pathlib import Path
 
 REMOTE = os.environ.get("REMOTE", "origin")
-INDEX_BRANCH = os.environ.get("INDEX_BRANCH", "main")
-STAGING_BRANCH = os.environ.get("STAGING_BRANCH", "staging")
+INDEX_BRANCH = os.environ.get("INDEX_BRANCH", "index")
+SOURCE_BRANCH = os.environ.get("SOURCE_BRANCH", "main")
 GIT_USER = os.environ.get("GIT_USER", "index-writer")
 GIT_EMAIL = os.environ.get("GIT_EMAIL", "index-writer@example.invalid")
 MAX_RETRIES = int(os.environ.get("MAX_RETRIES", "5"))
@@ -143,11 +145,11 @@ def add_entry(entry: Path) -> None:
     """Add one KPAR to the index worktree; sysand derives and validates the
     project's identity from the KPAR metadata. Stage the result."""
     run("sysand", "index", "add", "--kpar-path", str(entry),
-        "--index-root", str(WORKTREE / "index"))
-    changed = git_out("status", "--porcelain", "index", cwd=WORKTREE).splitlines()
+        "--index-root", str(WORKTREE))
+    changed = git_out("status", "--porcelain", cwd=WORKTREE).splitlines()
     if not changed:
         raise Fail(f"{entry}: sysand index add changed nothing")
-    git("add", "-A", "index", cwd=WORKTREE, quiet=True)
+    git("add", "-A", cwd=WORKTREE, quiet=True)
 
 
 def publish_batch(entries: list[Path]) -> None:
@@ -182,24 +184,29 @@ def publish_batch(entries: list[Path]) -> None:
 
 
 def clear_inbox(entries: list[Path]) -> None:
-    """Remove processed entries from staging. "[skip ci]" prevents writer
+    """Remove processed entries from the source branch. "[skip ci]" prevents writer
     recursion (belt); an empty inbox no-ops anyway (suspenders)."""
     for entry in entries:
         git("rm", "-q", str(entry))
     git("commit", "-m", f"inbox: processed {len(entries)} submission(s) [skip ci]", quiet=True)
     for attempt in range(1, MAX_RETRIES + 1):
-        if git("push", REMOTE, f"HEAD:refs/heads/{STAGING_BRANCH}", check=False).returncode == 0:
+        if git("push", REMOTE, f"HEAD:refs/heads/{SOURCE_BRANCH}", check=False).returncode == 0:
             return
-        print(f"Push to {STAGING_BRANCH} rejected - rebasing, retry {attempt}/{MAX_RETRIES}")
-        git("pull", "--rebase", REMOTE, STAGING_BRANCH)
-    raise Fail(f"could not update {STAGING_BRANCH}")
+        print(f"Push to {SOURCE_BRANCH} rejected - rebasing, retry {attempt}/{MAX_RETRIES}")
+        git("pull", "--rebase", REMOTE, SOURCE_BRANCH)
+    raise Fail(f"could not update {SOURCE_BRANCH}")
 
 
 def cmd_process_inbox() -> int:
     run("sysand", "--version", quiet=True)  # fail fast if missing
     git("config", "user.name", GIT_USER)
     git("config", "user.email", GIT_EMAIL)
-    git("fetch", REMOTE, INDEX_BRANCH, STAGING_BRANCH, quiet=True)
+    if git("fetch", REMOTE, INDEX_BRANCH, check=False, quiet=True).returncode != 0:
+        raise Fail(
+            f"branch '{INDEX_BRANCH}' does not exist on {REMOTE} - it holds "
+            "the generated index and must be created once (see ADMINISTRATION.md)"
+        )
+    git("fetch", REMOTE, SOURCE_BRANCH, quiet=True)
 
     entries = find_entries()
     if not entries:
@@ -245,10 +252,7 @@ def cmd_validate(base_ref: str) -> int:
             )
             print(f"FAIL: {path} - submissions must be .kpar files directly in inbox/")
             failures += 1
-        else:
-            sections.append(f"### `{path}`\n\n**REJECTED**: submissions may only touch inbox/\n")
-            print(f"FAIL: {path} - submissions may only touch inbox/")
-            failures += 1
+        # other files are ordinary code/docs changes, reviewed as such
 
     if len(sections) > 2:
         report = "\n".join(sections)
@@ -264,9 +268,9 @@ def cmd_validate(base_ref: str) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
-    sub.add_parser("process-inbox", help="run the writer (staging -> index branch)")
+    sub.add_parser("process-inbox", help="run the writer (inbox on the source branch -> index branch)")
     validate = sub.add_parser("validate", help="validate a submission diff")
-    validate.add_argument("base_ref", help="merge base, e.g. origin/staging")
+    validate.add_argument("base_ref", help="merge base, e.g. origin/main")
     args = parser.parse_args()
     try:
         if args.command == "process-inbox":
