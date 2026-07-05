@@ -19,8 +19,8 @@ publish gateway.
 index/                      the sysand static index (index.json, <pub>/<name>/versions.json, ...)
 inbox/                      (staging branch) submissions awaiting the writer
 publishers.toml             publisher authorization, config-as-code
-scripts/process-inbox.sh    the writer
-scripts/validate-inbox.sh   PR fast-feedback validation
+scripts/index_ci.py         all CI logic (Python >= 3.11, stdlib only):
+                            `process-inbox` = the writer, `validate` = PR checks
 .github/workflows/writer.yml        writer trigger (push to staging, serialized)
 .github/workflows/validate-pr.yml   PR validation
 .github/CODEOWNERS          per-publisher review requirements on inbox paths

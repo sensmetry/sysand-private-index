@@ -16,4 +16,4 @@ jobs:
         with:
           fetch-depth: 0
       - name: Validate inbox entries
-        run: bash scripts/validate-inbox.sh "origin/${{ github.base_ref }}"
+        run: python3 scripts/index_ci.py validate "origin/${{ github.base_ref }}"

@@ -33,4 +33,4 @@ jobs:
         run: pipx install sysand==0.1.4
 
       - name: Process inbox
-        run: bash scripts/process-inbox.sh
+        run: python3 scripts/index_ci.py process-inbox
