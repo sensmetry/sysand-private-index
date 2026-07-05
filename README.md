@@ -45,16 +45,17 @@ takes care of everything else.
    git switch -c submit/my-project-1.0.0
    ```
 
-2. Copy your `.kpar` file to
-   `inbox/<publisher>/<project name>/<version>/project.kpar`. The three
-   path parts identify your project, so they must match what is in the
-   project itself — `<publisher>` and `<project name>` as declared in its
-   metadata, `<version>` the version you are releasing:
+2. Copy your `.kpar` file — exactly as `sysand build` produced it, no
+   renaming — into your publisher's folder in the inbox:
 
    ```sh
-   mkdir -p inbox/my-team/my-project/1.0.0
-   cp path/to/my_project-1.0.0.kpar inbox/my-team/my-project/1.0.0/project.kpar
+   mkdir -p inbox/my-team
+   cp path/to/my_project-1.0.0.kpar inbox/my-team/
    ```
+
+   The folder name is your publisher namespace (it decides who reviews
+   your submission); the project's name and version are read from the
+   file itself.
 
 3. Commit, push, and open a pull request **targeting the `staging`
    branch**:
@@ -67,9 +68,9 @@ takes care of everything else.
 A validation check runs on your pull request and tells you if anything
 needs fixing. Once the reviewers for your publisher approve and merge,
 automation publishes your project — it is installable about a minute
-later. If the automation rejects your submission (for example, the path
-doesn't match the project's metadata), the workflow log on the merged
-commit explains why; fix and resubmit.
+later. If the automation rejects your submission (for example, the file's
+publisher doesn't match the folder you placed it in), the workflow log on
+the merged commit explains why; fix and resubmit.
 
 Two things to know:
 

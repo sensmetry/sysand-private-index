@@ -7,6 +7,11 @@ Subcommands:
   validate BASEREF  Pre-merge validation for MRs/PRs targeting staging
                     (fast feedback; the writer re-validates after merge).
 
+A submission is a KPAR file exactly as `sysand build` produced it, placed
+at inbox/<publisher>/<file>.kpar. The publisher directory decides who must
+review (CODEOWNERS); everything else — project name, version — comes from
+the KPAR's own metadata.
+
 Invariants:
 - The writer runs serialized (GitHub `concurrency:` / GitLab `resource_group`).
 - Prior index state is read from git, never from a deployed/served copy.
@@ -21,10 +26,12 @@ credentials configured on the remote.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import subprocess
 import sys
+import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -39,29 +46,15 @@ MAX_RETRIES = int(os.environ.get("MAX_RETRIES", "5"))
 
 INBOX = Path("inbox")
 WORKTREE = Path(".index-work")
-ENTRY_RE = re.compile(
-    r"^inbox/(?P<publisher>[^/]+)/(?P<name>[^/]+)/(?P<version>[^/]+)/project\.kpar$"
-)
+ENTRY_RE = re.compile(r"^inbox/(?P<publisher>[^/]+)/(?P<filename>[^/]+\.kpar)$")
 # Files under inbox/ that are not submissions but are allowed to exist.
 INBOX_ALLOWED = {Path("inbox/README.md")}
 
 
 @dataclass(frozen=True)
 class Entry:
-    publisher: str
-    name: str
-    version: str
+    publisher: str  # the inbox directory = the reviewed namespace
     path: Path
-
-    @property
-    def iri(self) -> str:
-        # Explicit IRI derived from the inbox path pins path<->identity
-        # consistency; sysand rejects a KPAR whose name disagrees.
-        return f"pkg:sysand/{self.publisher}/{self.name}"
-
-    @property
-    def index_path(self) -> Path:
-        return Path("index") / self.publisher / self.name / self.version
 
 
 class Fail(Exception):
@@ -85,9 +78,9 @@ def git(*args: str, cwd: Path | None = None, check: bool = True, quiet: bool = F
     return run("git", *args, cwd=cwd, check=check, quiet=quiet)
 
 
-def git_out(*args: str) -> str:
+def git_out(*args: str, cwd: Path | None = None) -> str:
     return subprocess.run(
-        ("git", *args), check=True, text=True, capture_output=True
+        ("git", *args), cwd=cwd, check=True, text=True, capture_output=True
     ).stdout
 
 
@@ -95,7 +88,16 @@ def parse_entry(path: str) -> Entry | None:
     m = ENTRY_RE.match(path)
     if not m:
         return None
-    return Entry(m["publisher"], m["name"], m["version"], Path(path))
+    return Entry(m["publisher"], Path(path))
+
+
+def kpar_metadata(path: Path) -> dict:
+    """Read .project.json out of the KPAR (a zip archive)."""
+    try:
+        with zipfile.ZipFile(path) as zf:
+            return json.loads(zf.read(".project.json"))
+    except Exception as exc:
+        raise Fail(f"{path}: not a readable KPAR ({exc})") from exc
 
 
 def declared_publishers() -> set[str]:
@@ -113,9 +115,7 @@ def find_entries() -> list[Entry]:
             continue
         entry = parse_entry(path.as_posix())
         if entry is None:
-            raise Fail(
-                f"{path}: does not match inbox/<publisher>/<name>/<version>/project.kpar"
-            )
+            raise Fail(f"{path}: submissions must be inbox/<publisher>/<file>.kpar")
         entries.append(entry)
     return entries
 
@@ -135,6 +135,30 @@ def remove_worktree() -> None:
     git("worktree", "prune", quiet=True)
 
 
+def add_entry(entry: Entry) -> None:
+    """Add one KPAR to the index worktree; sysand derives the project's
+    identity (and its normalization) from the KPAR metadata. Then enforce
+    that everything the add touched lies inside the submitter's reviewed
+    namespace, and stage it."""
+    run("sysand", "index", "add", "--kpar-path", str(entry.path),
+        "--index-root", str(WORKTREE / "index"))
+    changed = [
+        line[3:] for line in
+        git_out("status", "--porcelain", "index", cwd=WORKTREE).splitlines()
+    ]
+    allowed = ("index/index.json", f"index/{entry.publisher}/")
+    for path in changed:
+        if path != allowed[0] and not path.startswith(allowed[1]):
+            raise Fail(
+                f"{entry.path}: KPAR publishes to '{path}', outside the "
+                f"reviewed namespace 'index/{entry.publisher}/' — the "
+                "KPAR's publisher metadata must match the inbox directory"
+            )
+    if not changed:
+        raise Fail(f"{entry.path}: sysand index add changed nothing")
+    git("add", "-A", "index", cwd=WORKTREE, quiet=True)
+
+
 def publish_batch(entries: list[Entry]) -> None:
     """Apply all entries to a fresh checkout of the index branch; retry the
     whole batch on push races (rebase-retry, serialized writer)."""
@@ -145,17 +169,7 @@ def publish_batch(entries: list[Entry]) -> None:
         git("worktree", "add", "--detach", str(WORKTREE), f"{REMOTE}/{INDEX_BRANCH}", quiet=True)
         try:
             for entry in entries:
-                run(
-                    "sysand", "index", "add", entry.iri,
-                    "--kpar-path", str(entry.path),
-                    "--index-root", str(WORKTREE / "index"),
-                )
-                if not (WORKTREE / entry.index_path / "project.kpar").exists():
-                    raise Fail(
-                        f"{entry.path}: KPAR metadata does not match the "
-                        "inbox path (publisher/name/version)"
-                    )
-            git("add", "-A", "index", cwd=WORKTREE)
+                add_entry(entry)
             git(
                 "-c", f"user.name={GIT_USER}", "-c", f"user.email={GIT_EMAIL}",
                 "commit", "-m", f"index: publish {summary}",
@@ -180,7 +194,7 @@ def clear_inbox(entries: list[Entry]) -> None:
     """Remove processed entries from staging. "[skip ci]" prevents writer
     recursion (belt); an empty inbox no-ops anyway (suspenders)."""
     for entry in entries:
-        git("rm", "-rq", str(entry.path.parent))
+        git("rm", "-q", str(entry.path))
     git("commit", "-m", f"inbox: processed {len(entries)} submission(s) [skip ci]", quiet=True)
     for attempt in range(1, MAX_RETRIES + 1):
         if git("push", REMOTE, f"HEAD:refs/heads/{STAGING_BRANCH}", check=False).returncode == 0:
@@ -202,7 +216,8 @@ def cmd_process_inbox() -> int:
         return 0
     print(f"Processing {len(entries)} submission(s):")
     for entry in entries:
-        print(f"  {entry.path}")
+        meta = kpar_metadata(entry.path)
+        print(f"  {entry.path}: {meta.get('publisher')}/{meta.get('name')} {meta.get('version')}")
 
     check_authorized(entries)
     publish_batch(entries)
@@ -212,7 +227,7 @@ def cmd_process_inbox() -> int:
 
 def cmd_validate(base_ref: str) -> int:
     """Validate the diff BASE_REF...HEAD: submissions may only add
-    well-formed inbox entries for declared publishers."""
+    KPAR files under a declared publisher's inbox directory."""
     changed = git_out(
         "diff", "--name-only", "--diff-filter=ACMR", f"{base_ref}...HEAD"
     ).splitlines()
@@ -226,18 +241,27 @@ def cmd_validate(base_ref: str) -> int:
     for path in changed:
         entry = parse_entry(path)
         if entry is not None:
-            if entry.publisher in publishers:
-                print(f"ok:   {path}")
-            else:
+            if entry.publisher not in publishers:
                 print(
                     f"FAIL: {path} - publisher '{entry.publisher}' not "
                     f"declared in publishers.toml (on {INDEX_BRANCH})"
                 )
                 failures += 1
+                continue
+            try:
+                meta = kpar_metadata(Path(path))
+            except Fail as exc:
+                print(f"FAIL: {exc}")
+                failures += 1
+                continue
+            print(
+                f"ok:   {path} - {meta.get('publisher')}/{meta.get('name')} "
+                f"{meta.get('version')}"
+            )
         elif Path(path) in INBOX_ALLOWED:
             print(f"ok:   {path}")
         elif path.startswith("inbox/"):
-            print(f"FAIL: {path} - must match inbox/<publisher>/<name>/<version>/project.kpar")
+            print(f"FAIL: {path} - submissions must be inbox/<publisher>/<file>.kpar")
             failures += 1
         else:
             print(f"FAIL: {path} - submissions may only touch inbox/")

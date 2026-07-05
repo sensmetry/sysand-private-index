@@ -11,11 +11,14 @@ repository to run their own. For installing and publishing, see the
 | `main` | the index (`index/`), `publishers.toml`, automation | the writer workflow only |
 | `staging` | `inbox/` — submissions awaiting processing | contributors, via pull request |
 
-Every push to `staging` runs the **writer**
+Submissions are KPAR files at `inbox/<publisher>/<file>.kpar`; the
+publisher folder routes review (CODEOWNERS), everything else comes from
+the KPAR's metadata. Every push to `staging` runs the **writer**
 (`.github/workflows/writer.yml`), which checks each inbox entry against
-`publishers.toml`, adds it to the index on `main` with `sysand index add`,
-and clears the inbox. Nobody edits `index/` by hand. The index is served
-to `sysand` by `raw.githubusercontent.com` from `main`.
+`publishers.toml`, adds it to the index on `main` with `sysand index add`
+— verifying that everything the add touches stays inside the submitter's
+namespace — and clears the inbox. Nobody edits `index/` by hand. The
+index is served to `sysand` by `raw.githubusercontent.com` from `main`.
 
 ```
 publishers.toml             who may publish what (edit this)
