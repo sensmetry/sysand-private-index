@@ -32,7 +32,7 @@ be merged.
 
 ```
 kpars/                      submitted artifacts (the index-writer publishes from here)
-manage_index.py             validation + index-writer logic (Python >= 3.11, stdlib only)
+manage_index.py             the index automation: validate + reconcile (Python >= 3.11, stdlib only)
 .github/workflows/          index-writer + pull-request validation
 ```
 
