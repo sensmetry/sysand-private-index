@@ -45,10 +45,10 @@ takes care of everything else.
    ```
 
 2. Copy your `.kpar` file — exactly as `sysand build` produced it, no
-   renaming — into the inbox:
+   renaming — into the `kpars/` folder:
 
    ```sh
-   cp path/to/my_project-1.0.0.kpar inbox/
+   cp path/to/my_project-1.0.0.kpar kpars/
    ```
 
    Everything about your project (publisher, name, version) is read from
@@ -57,7 +57,7 @@ takes care of everything else.
 3. Commit, push, and open a pull request:
 
    ```sh
-   git add inbox && git commit -m "submit: my-team/my-project 1.0.0"
+   git add kpars && git commit -m "submit: my-team/my-project 1.0.0"
    git push -u origin HEAD
    ```
 

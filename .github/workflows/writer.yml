@@ -1,7 +1,7 @@
 name: index-writer
-# The writer: runs on every push to main, publishes inbox/ submissions to
-# the generated `index` branch, then clears the inbox. Serialized by the
-# concurrency group. No-ops when the inbox is empty.
+# The writer: runs on every push to main and reconciles the generated
+# `index` branch against kpars/ - anything not yet published gets
+# published; everything else is a no-op. Idempotent; never writes to main.
 on:
   push:
     branches: [main]
@@ -11,10 +11,10 @@ concurrency:
   cancel-in-progress: false # queue, never cancel a write in flight
 
 jobs:
-  process-inbox:
+  reconcile:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # lets the job push to the index branch and clear inbox/
+      contents: write # lets the job push to the index branch
     steps:
       - uses: actions/checkout@v7
         with:
@@ -28,5 +28,5 @@ jobs:
         # Adjust to how you distribute sysand internally; pin the version.
         run: pipx install sysand==0.1.5
 
-      - name: Process inbox
-        run: scripts/index_ci.py process-inbox
+      - name: Reconcile index with kpars/
+        run: scripts/index_ci.py reconcile
