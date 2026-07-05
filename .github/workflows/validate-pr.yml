@@ -1,7 +1,8 @@
 name: validate-submission
-# Fast feedback on pull requests: validates each submission and
-# posts a report of what the KPAR contains, so reviewers see exactly what
-# is being added. Rejects modifications to already-published KPARs.
+# Fast feedback on pull requests: validates each submission and dry-runs
+# the publish, so a bad submission fails the check before merge. The
+# report is printed in this job's log. Rejects modifications to
+# already-published KPARs.
 on:
   pull_request:
     branches: [main]
@@ -11,7 +12,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: write # to post the submission report as a comment
     steps:
       - uses: actions/checkout@v7
         with:
@@ -24,14 +24,3 @@ jobs:
         run: pipx install sysand==0.1.5
       - name: Validate submissions
         run: scripts/index_ci.py validate "origin/${{ github.base_ref }}"
-      - name: Post submission report on the PR
-        if: always()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          if [ -f kpar-report.md ]; then
-            gh pr comment "${{ github.event.pull_request.number }}" \
-              --body-file kpar-report.md --edit-last --create-if-none ||
-            gh pr comment "${{ github.event.pull_request.number }}" \
-              --body-file kpar-report.md
-          fi

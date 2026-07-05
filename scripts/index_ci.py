@@ -8,8 +8,8 @@ Subcommands:
   validate BASEREF  Pre-merge validation for MRs/PRs: describes every
                     submission and dry-runs the actual publish against a
                     throwaway checkout of the index branch (nothing is
-                    pushed). Writes kpar-report.md so CI can post it on
-                    the PR/MR.
+                    pushed). Prints the report to stdout (the CI job log)
+                    and exits non-zero if any submission is rejected.
 
 A submission is a KPAR file exactly as `sysand build` produced it, placed
 directly in kpars/ on the default branch, where it remains: the folder is
@@ -51,7 +51,6 @@ MAX_RETRIES = int(os.environ.get("MAX_RETRIES", "5"))
 
 KPARS = Path("kpars")
 WORKTREE = Path(".index-work")
-REPORT = Path("kpar-report.md")
 ENTRY_RE = re.compile(r"^kpars/[^/]+\.kpar$")
 # Files under kpars/ that are not submissions but are allowed to exist.
 KPARS_ALLOWED = {Path("kpars/README.md")}
@@ -272,9 +271,9 @@ def publish_context(touched: list[str]) -> str:
 
 
 def cmd_validate(base_ref: str) -> int:
-    """Validate the diff BASE_REF...HEAD and write kpar-report.md
-    describing each submission for reviewers, including a dry-run of the
-    actual publish against a throwaway index-branch worktree."""
+    """Validate the diff BASE_REF...HEAD, printing a report describing each
+    submission (with a dry-run of the actual publish against a throwaway
+    index-branch worktree) and exiting non-zero if any is rejected."""
     changed = []
     for line in git_out(
         "diff", "--name-status", "--diff-filter=ACMR", f"{base_ref}...HEAD"
@@ -358,13 +357,7 @@ def cmd_validate(base_ref: str) -> int:
     if dry_run:
         remove_worktree()
     if len(sections) > 2:
-        report = "\n".join(sections)
-        REPORT.write_text(report)
-        print(f"Report written to {REPORT}")
-        step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
-        if step_summary:
-            with open(step_summary, "a") as fh:
-                fh.write(report)
+        print("\n".join(sections))
     return 1 if failures else 0
 
 

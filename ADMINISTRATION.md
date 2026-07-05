@@ -23,10 +23,12 @@ to grant automation any special rights on `main`. Nobody edits the
 `raw.githubusercontent.com` from the `index` branch.
 
 **Review is the publishing gate**: whatever reviewers approve on `main`
-gets published. To make that review meaningful, the validation workflow
-posts a report on each pull request describing every submitted KPAR
-(project, version, license, contents, digest), and rejects modifications
-to already-submitted files (published versions are immutable).
+gets published. To make that review meaningful, the validation check
+describes every submitted KPAR (project, version, license, contents,
+digest) in its log, dry-runs the publish, and rejects modifications to
+already-submitted files (published versions are immutable). Make this
+check **required** in branch protection so a failing submission cannot
+be merged.
 
 ```
 kpars/                      submitted artifacts (the writer publishes from here)
