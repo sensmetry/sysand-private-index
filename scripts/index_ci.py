@@ -152,7 +152,7 @@ def remove_worktree() -> None:
     git("worktree", "prune", quiet=True)
 
 
-def add_entry(entry: Path) -> None:
+def add_entry(entry: Path) -> list[str]:
     """Add one KPAR to the index worktree; sysand derives and validates the
     project's identity from the KPAR metadata. Stage the result."""
     result = run("sysand", "index", "add", "--kpar-path", str(entry),
@@ -165,11 +165,19 @@ def add_entry(entry: Path) -> None:
                 f"{entry}: this version is already published with different "
                 "content - published versions are immutable; bump the version"
             )
-        raise Fail(f"{entry}: sysand index add failed")
-    changed = git_out("status", "--porcelain", cwd=WORKTREE).splitlines()
+        reason = next(
+            (l for l in (result.stdout or "").splitlines() if l.startswith("error")),
+            (result.stdout or "").strip().splitlines()[-1] if (result.stdout or "").strip() else "unknown error",
+        )
+        raise Fail(f"{entry}: sysand index add failed: {reason}")
+    changed = [
+        line[3:] for line in
+        git_out("status", "--porcelain", cwd=WORKTREE).splitlines()
+    ]
     if not changed:
         raise Fail(f"{entry}: sysand index add changed nothing")
     git("add", "-A", cwd=WORKTREE, quiet=True)
+    return changed
 
 
 def publish_batch(entries: list[Path]) -> None:
@@ -229,6 +237,37 @@ def cmd_reconcile() -> int:
     return 0
 
 
+def publish_context(touched: list[str]) -> str:
+    """One line of reviewer context: is this a known publisher/project on
+    the index branch (list prior versions), or a first appearance?"""
+    dirs = {p.split("/")[0] + "/" + p.split("/")[1] for p in touched if p.count("/") >= 2}
+    if not dirs:
+        return "\n"
+    publisher_name = sorted(dirs)[0]
+    publisher = publisher_name.split("/")[0]
+    known_publisher = bool(
+        git_out("ls-tree", "HEAD", "--", publisher, cwd=WORKTREE).strip()
+    )
+    if not known_publisher:
+        return (
+            f"\n\n:warning: **First submission under publisher `{publisher}` "
+            "on this index** - verify the submitter is entitled to publish "
+            "under this name.\n"
+        )
+    prior = run(
+        "git", "show", f"HEAD:{publisher_name}/versions.json",
+        cwd=WORKTREE, check=False, quiet=True,
+    )
+    if prior.returncode == 0:
+        versions = [v.get("version") for v in json.loads(prior.stdout).get("versions", [])]
+        return f"\nPreviously published versions of `{publisher_name}`: {', '.join(versions)}.\n"
+    return (
+        f"\n\n:warning: **New project `{publisher_name}` under existing "
+        f"publisher `{publisher}`** - verify the submitter is entitled to "
+        "publish under this name.\n"
+    )
+
+
 def cmd_validate(base_ref: str) -> int:
     """Validate the diff BASE_REF...HEAD and write kpar-report.md
     describing each submission for reviewers, including a dry-run of the
@@ -258,7 +297,15 @@ def cmd_validate(base_ref: str) -> int:
             print(f"note: no '{INDEX_BRANCH}' branch on {REMOTE} - skipping publish dry-run")
 
     failures = 0
-    sections = ["## Index submission report", ""]
+    sections = [
+        "## Index submission report",
+        "",
+        "> **Approving this change publishes the artifacts below to every "
+        "consumer of this index.** Approval is the only gate: confirm each "
+        "submission's publisher and project name are ones this submitter is "
+        "entitled to publish.",
+        "",
+    ]
     for status, path in changed:
         if ENTRY_RE.match(path) and status == "M":
             sections.append(
@@ -283,8 +330,9 @@ def cmd_validate(base_ref: str) -> int:
                     print(f"ok:   {path} (already published)")
                 else:
                     try:
-                        add_entry(Path(path))
-                        section += "\n**Publish check**: dry-run against the index branch succeeded - will be published on merge.\n"
+                        touched = add_entry(Path(path))
+                        section += "\n**Publish check**: dry-run against the index branch succeeded - will be published on merge."
+                        section += publish_context(touched)
                         print(f"ok:   {path} (publish dry-run ok)")
                     except Fail as exc:
                         section += f"\n**REJECTED (publish check)**: {exc}\n"

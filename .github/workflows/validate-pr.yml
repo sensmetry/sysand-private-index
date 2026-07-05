@@ -1,7 +1,7 @@
 name: validate-submission
 # Fast feedback on pull requests: validates each submission and
 # posts a report of what the KPAR contains, so reviewers see exactly what
-# is being added. Rejects modifications to already-published KPARs..
+# is being added. Rejects modifications to already-published KPARs.
 on:
   pull_request:
     branches: [main]

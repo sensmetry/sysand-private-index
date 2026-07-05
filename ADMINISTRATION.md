@@ -41,7 +41,10 @@ scripts/index_ci.py         validation + writer logic (Python >= 3.11, stdlib on
 2. Protect `main`: require pull requests with at least one approving
    review. Whoever can approve pull requests can publish — that review is
    the entire authorization model, so choose the approvers accordingly.
-3. Protect `index` with a ruleset: **Restrict updates**, with **GitHub
+3. Fill in the README for your instance: replace `YOUR-ORG`/`YOUR-INDEX`
+   in the install and publish sections with your real values, and say who
+   to ask for a read token — consumers are sent to the README, not here.
+4. Protect `index` with a ruleset: **Restrict updates**, with **GitHub
    Actions** as the only bypass — the writer is then the only thing that
    can touch the published index. (The GitHub Actions bypass actor is
    available in organization-owned repositories; on a personal repository,

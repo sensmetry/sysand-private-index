@@ -26,10 +26,22 @@ export SYSAND_CRED_TEAMIDX_BEARER_TOKEN="<read token>"
 sysand add pkg:sysand/<publisher>/<project> --index "<index URL>"
 ```
 
+Two notes on the first line: `TEAMIDX` is any label you like, and the
+trailing `**` is required — it tells `sysand` to send the token for
+everything under the index URL (don't remove it). To see what projects
+exist, browse this repository's `index` branch: folders are laid out as
+`<publisher>/<project>/`.
+
 That's it — `sysand` downloads the project and its dependencies like from
 any other index. To avoid retyping, the URL and credentials can be stored
 in `sysand.toml`; see the
 [sysand documentation](https://docs.sysand.com/client/).
+
+If you see `no resolver was able to resolve the IRI`: (1) check the
+token — GitHub reports bad auth as 404, so a bad token looks like a
+missing project; (2) check the `**` is still at the end of the
+`SYSAND_CRED_*` URL; (3) check the publisher/project spelling against
+the `index` branch.
 
 ## Publish a project
 
