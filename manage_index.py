@@ -217,30 +217,51 @@ def reconcile():
             print("Every submission is already published - nothing to do.")
             return
 
+        # Publish each submission independently. One bad KPAR (e.g. an older
+        # archive a newer sysand rejects) must not block the rest - it is
+        # skipped and reported, and the run fails at the end so it is noticed.
         print(f"Publishing {len(new)} package(s):")
+        published, failed = [], []
         for kpar in new:
             print(f"  {kpar}")
-            add_to_index(kpar)
+            try:
+                add_to_index(kpar)
+                published.append(kpar)
+            except Rejected as exc:
+                print(f"  skipped {kpar}: {exc}")
+                failed.append(kpar)
 
-        name, email = INDEX_WRITER
-        message = "index: publish " + " ".join(kpar.name for kpar in new)
-        git(
-            "-c",
-            f"user.name={name}",
-            "-c",
-            f"user.email={email}",
-            "commit",
-            "-m",
-            message,
-            cwd=WORKTREE,
-            quiet=True,
-        )
-        pushed = git(
-            "push", REMOTE, f"HEAD:refs/heads/{INDEX_BRANCH}", cwd=WORKTREE, check=False
-        )
-        if pushed.returncode != 0:
+        if published:
+            name, email = INDEX_WRITER
+            message = "index: publish " + " ".join(kpar.name for kpar in published)
+            git(
+                "-c",
+                f"user.name={name}",
+                "-c",
+                f"user.email={email}",
+                "commit",
+                "-m",
+                message,
+                cwd=WORKTREE,
+                quiet=True,
+            )
+            pushed = git(
+                "push",
+                REMOTE,
+                f"HEAD:refs/heads/{INDEX_BRANCH}",
+                cwd=WORKTREE,
+                check=False,
+            )
+            if pushed.returncode != 0:
+                raise Rejected(
+                    f"pushing the {INDEX_BRANCH} branch failed - run reconcile again"
+                )
+
+        if failed:
+            names = ", ".join(kpar.name for kpar in failed)
             raise Rejected(
-                f"pushing the {INDEX_BRANCH} branch failed - run reconcile again"
+                f"{len(failed)} of {len(new)} submission(s) could not be published "
+                f"(the rest were); remove or fix: {names}"
             )
 
 

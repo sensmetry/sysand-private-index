@@ -67,11 +67,32 @@ push — the next index-writer run republishes everything in `kpars/`.
 Note that `raw.githubusercontent.com` content can lag pushes by a few
 minutes and has unpublished rate limits; it works well at team scale.
 
+## Verify your setup (optional)
+
+This repository ships with an empty index. Before you onboard your team,
+you can prove the whole pipeline end to end with a throwaway package:
+
+1. Build a small package with `sysand build`, using a throwaway
+   publisher/name you will not reuse.
+2. Open a pull request adding its `.kpar` to `kpars/` (see
+   [Publish a project](README.md#publish-a-project)) and confirm the
+   validation check passes.
+3. Merge it, confirm the index-writer run is green, and check the package
+   appears under your index URL.
+4. Install it with the read token, exactly as a consumer would.
+5. It was a throwaway, so retire it when done: `sysand index yank <iri>
+--version <v> --index-root .` on the `index` branch, or reset the index
+   to empty (remove its publisher directory and set `index.json` to
+   `{"projects": []}`).
+
 ## Maintenance
 
-- The index-writer processes submissions as one batch; a bad file blocks the
-  batch until removed (check the failed workflow run's log). Removing a
-  file from `kpars/` does **not** unpublish it — the index-writer only adds.
+- The index-writer publishes each submission independently. If one cannot
+  be published — for example an older KPAR that a newer `sysand` rejects —
+  it is skipped and reported, the rest are still published, and the run
+  fails so you notice (check the workflow run's log). Remove or rebuild the
+  offending file to clear it. Removing a file from `kpars/` does **not**
+  unpublish it — the index-writer only adds.
 - To retire a published version, run
   `sysand index yank <iri> --version <v> --index-root .` on a checkout of
   the `index` branch and push it through your ruleset's exception process
