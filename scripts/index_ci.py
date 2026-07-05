@@ -2,27 +2,27 @@
 """CI logic for this private sysand index.
 
 Subcommands:
-  reconcile         The index-writer: publish every kpars/ file not yet in the
-                    generated index branch. Idempotent - already-published
+  reconcile         The index-writer: publish every kpars/ file not yet in
+                    the generated index branch. Idempotent - already-published
                     files (by digest) are skipped; nothing is ever removed.
-  validate BASEREF  Pre-merge validation for MRs/PRs: describes every
-                    submission and dry-runs the actual publish against a
-                    throwaway checkout of the index branch (nothing is
-                    pushed). Prints the report to stdout (the CI job log)
-                    and exits non-zero if any submission is rejected.
+  validate BASEREF  Pre-merge validation for MRs/PRs: for each submitted
+                    KPAR, dry-runs the actual publish against a throwaway
+                    checkout of the index branch (nothing is pushed), prints
+                    one result line per submission, and exits non-zero if any
+                    submission is rejected.
 
 A submission is a KPAR file exactly as `sysand build` produced it, placed
 directly in kpars/ on the default branch, where it remains: the folder is
-the declarative set of submitted artifacts, and the index-writer reconciles the
-index branch against it. The project's identity - publisher, name,
+the declarative set of submitted artifacts, and the index-writer reconciles
+the index branch against it. The project's identity - publisher, name,
 version - comes from the KPAR's own metadata. Review of the pull/merge
 request is the publishing gate: what reviewers approve gets published.
 
 Invariants:
-- The index-writer runs serialized (GitHub `concurrency:` / GitLab `resource_group`).
+- The index-writer runs serialized (GitHub `concurrency:` / GitLab
+  `resource_group`) and is the only writer of the index branch, so its push
+  never races.
 - Prior index state is read from git, never from a deployed/served copy.
-- Only the index-writer's CI identity may push to the index branch (protected);
-  the index-writer never writes to the default branch.
 - Published versions are immutable: the index-writer only ever adds, and a
   changed KPAR under an already-published version is an error.
 
@@ -36,18 +36,16 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 import re
 import subprocess
 import sys
 import zipfile
 from pathlib import Path
 
-REMOTE = os.environ.get("REMOTE", "origin")
-INDEX_BRANCH = os.environ.get("INDEX_BRANCH", "index")
-GIT_USER = os.environ.get("GIT_USER", "index-writer")
-GIT_EMAIL = os.environ.get("GIT_EMAIL", "index-writer@example.invalid")
-MAX_RETRIES = int(os.environ.get("MAX_RETRIES", "5"))
+REMOTE = "origin"
+INDEX_BRANCH = "index"
+GIT_USER = "index-writer"
+GIT_EMAIL = "index-writer@example.invalid"
 
 KPARS = Path("kpars")
 WORKTREE = Path(".index-work")
@@ -83,48 +81,20 @@ def git_out(*args: str, cwd: Path | None = None) -> str:
     ).stdout
 
 
-def kpar_metadata(path: Path) -> tuple[dict, dict]:
-    """Read (.project.json, .meta.json) out of the KPAR (a zip archive)."""
+def sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def kpar_label(path: Path) -> str:
+    """Short identity of a KPAR, from its own metadata: `pub/name X.Y.Z`."""
     try:
         with zipfile.ZipFile(path) as zf:
             project = json.loads(zf.read(".project.json"))
-            try:
-                meta = json.loads(zf.read(".meta.json"))
-            except KeyError:
-                meta = {}
-            return project, meta
-    except Fail:
-        raise
     except Exception as exc:
-        raise Fail(f"{path}: not a readable KPAR ({exc})") from exc
-
-
-def describe_kpar(path: Path) -> str:
-    """Markdown section describing one submission, for reviewers."""
-    project, meta = kpar_metadata(path)
-    digest = hashlib.sha256(path.read_bytes()).hexdigest()
-    size = path.stat().st_size
-    usages = project.get("usage") or []
-    deps = (
-        ", ".join(f"`{u.get('resource', u)}`" for u in usages) if usages else "none"
-    )
-    with zipfile.ZipFile(path) as zf:
-        files = ", ".join(f"`{n}`" for n in zf.namelist() if not n.startswith("."))
-    lines = [
-        f"### `{path.name}`",
-        "",
-        "| | |",
-        "| --- | --- |",
-        f"| project | **{project.get('publisher')}/{project.get('name')}** |",
-        f"| version | {project.get('version')} |",
-        f"| license | {project.get('license', '(none)')} |",
-        f"| declared dependencies | {deps} |",
-        f"| model files | {files or '(none)'} |",
-        f"| built | {meta.get('created', '(unknown)')} |",
-        f"| size / sha256 | {size} bytes / `{digest[:16]}…` |",
-        "",
-    ]
-    return "\n".join(lines)
+        raise Fail(f"not a readable KPAR ({exc})") from exc
+    lic = project.get("license")
+    suffix = f" (license {lic})" if lic else ""
+    return f"{project.get('publisher')}/{project.get('name')} {project.get('version')}{suffix}"
 
 
 def find_entries() -> list[Path]:
@@ -140,10 +110,7 @@ def find_entries() -> list[Path]:
 
 def published_digests() -> set[str]:
     """sha256 of every KPAR already on the index branch (in the worktree)."""
-    return {
-        hashlib.sha256(p.read_bytes()).hexdigest()
-        for p in WORKTREE.glob("*/*/*/project.kpar")
-    }
+    return {sha256(p) for p in WORKTREE.glob("*/*/*/project.kpar")}
 
 
 def remove_worktree() -> None:
@@ -151,7 +118,7 @@ def remove_worktree() -> None:
     git("worktree", "prune", quiet=True)
 
 
-def add_entry(entry: Path) -> list[str]:
+def add_entry(entry: Path) -> None:
     """Add one KPAR to the index worktree; sysand derives and validates the
     project's identity from the KPAR metadata. Stage the result."""
     result = run("sysand", "index", "add", "--kpar-path", str(entry),
@@ -161,66 +128,46 @@ def add_entry(entry: Path) -> list[str]:
     if result.returncode != 0:
         if "already exists" in (result.stdout or ""):
             raise Fail(
-                f"{entry}: this version is already published with different "
-                "content - published versions are immutable; bump the version"
+                "this version is already published with different content - "
+                "published versions are immutable; bump the version"
             )
         reason = next(
             (l for l in (result.stdout or "").splitlines() if l.startswith("error")),
-            (result.stdout or "").strip().splitlines()[-1] if (result.stdout or "").strip() else "unknown error",
+            "sysand index add failed",
         )
-        raise Fail(f"{entry}: sysand index add failed: {reason}")
-    # Only worktree-side (unstaged/untracked) changes: earlier entries in
-    # this batch are already staged and must not leak into this entry's set.
-    changed = [
-        line[3:] for line in
-        git_out("status", "--porcelain", "--untracked-files=all", cwd=WORKTREE).splitlines()
-        if line[1] != " "
-    ]
-    if not changed:
-        raise Fail(f"{entry}: sysand index add changed nothing")
+        raise Fail(reason)
+    if not git_out("status", "--porcelain", cwd=WORKTREE).strip():
+        raise Fail("sysand index add changed nothing")
     git("add", "-A", cwd=WORKTREE, quiet=True)
-    return changed
 
 
 def publish_batch(entries: list[Path]) -> None:
-    """Apply all entries to a fresh checkout of the index branch; retry the
-    whole batch on push races (rebase-retry, serialized index-writer)."""
-    summary = ""  # set after filtering; commit message built below
-    for attempt in range(1, MAX_RETRIES + 1):
-        git("fetch", REMOTE, INDEX_BRANCH, quiet=True)
+    """Publish every not-yet-published entry to the index branch. The
+    index-writer is serialized and the sole writer of that branch, so the
+    push does not race; a failed push means re-run the job."""
+    git("fetch", REMOTE, INDEX_BRANCH, quiet=True)
+    remove_worktree()
+    git("worktree", "add", "--detach", str(WORKTREE), f"{REMOTE}/{INDEX_BRANCH}", quiet=True)
+    try:
+        published = published_digests()
+        new = [e for e in entries if sha256(e) not in published]
+        if not new:
+            print("Everything in kpars/ is already published - nothing to do.")
+            return
+        print(f"Publishing {len(new)} artifact(s):")
+        for entry in new:
+            print(f"  {entry}")
+            add_entry(entry)
+        git(
+            "-c", f"user.name={GIT_USER}", "-c", f"user.email={GIT_EMAIL}",
+            "commit", "-m", "index: publish " + " ".join(e.name for e in new),
+            cwd=WORKTREE, quiet=True,
+        )
+        push = git("push", REMOTE, f"HEAD:refs/heads/{INDEX_BRANCH}", cwd=WORKTREE, check=False)
+        if push.returncode != 0:
+            raise Fail(f"push to {INDEX_BRANCH} failed - re-run the index-writer to retry")
+    finally:
         remove_worktree()
-        git("worktree", "add", "--detach", str(WORKTREE), f"{REMOTE}/{INDEX_BRANCH}", quiet=True)
-        try:
-            published = published_digests()
-            new = [
-                e for e in entries
-                if hashlib.sha256(e.read_bytes()).hexdigest() not in published
-            ]
-            if not new:
-                print("Everything in kpars/ is already published - nothing to do.")
-                return
-            print(f"Publishing {len(new)} artifact(s):")
-            for entry in new:
-                print(f"  {entry}")
-                add_entry(entry)
-            git(
-                "-c", f"user.name={GIT_USER}", "-c", f"user.email={GIT_EMAIL}",
-                "commit", "-m", "index: publish " + " ".join(e.name for e in new),
-                cwd=WORKTREE, quiet=True,
-            )
-            push = git(
-                "push", REMOTE, f"HEAD:refs/heads/{INDEX_BRANCH}",
-                cwd=WORKTREE, check=False,
-            )
-            if push.returncode == 0:
-                return
-            print(
-                f"Push to {INDEX_BRANCH} rejected (concurrent write) - "
-                f"retry {attempt}/{MAX_RETRIES}"
-            )
-        finally:
-            remove_worktree()
-    raise Fail(f"could not push to {INDEX_BRANCH} after {MAX_RETRIES} attempts")
 
 
 def cmd_reconcile() -> int:
@@ -230,7 +177,6 @@ def cmd_reconcile() -> int:
             f"branch '{INDEX_BRANCH}' does not exist on {REMOTE} - it holds "
             "the generated index and must be created once (see ADMINISTRATION.md)"
         )
-
     entries = find_entries()
     if not entries:
         print("kpars/ is empty - nothing to do.")
@@ -239,41 +185,10 @@ def cmd_reconcile() -> int:
     return 0
 
 
-def publish_context(touched: list[str]) -> str:
-    """One line of reviewer context: is this a known publisher/project on
-    the index branch (list prior versions), or a first appearance?"""
-    dirs = {p.split("/")[0] + "/" + p.split("/")[1] for p in touched if p.count("/") >= 2}
-    if not dirs:
-        return "\n"
-    publisher_name = sorted(dirs)[0]
-    publisher = publisher_name.split("/")[0]
-    known_publisher = bool(
-        git_out("ls-tree", "HEAD", "--", publisher, cwd=WORKTREE).strip()
-    )
-    if not known_publisher:
-        return (
-            f"\n\n:warning: **First submission under publisher `{publisher}` "
-            "on this index** - verify the submitter is entitled to publish "
-            "under this name.\n"
-        )
-    prior = run(
-        "git", "show", f"HEAD:{publisher_name}/versions.json",
-        cwd=WORKTREE, check=False, quiet=True,
-    )
-    if prior.returncode == 0:
-        versions = [v.get("version") for v in json.loads(prior.stdout).get("versions", [])]
-        return f"\nPreviously published versions of `{publisher_name}`: {', '.join(versions)}.\n"
-    return (
-        f"\n\n:warning: **New project `{publisher_name}` under existing "
-        f"publisher `{publisher}`** - verify the submitter is entitled to "
-        "publish under this name.\n"
-    )
-
-
 def cmd_validate(base_ref: str) -> int:
-    """Validate the diff BASE_REF...HEAD, printing a report describing each
-    submission (with a dry-run of the actual publish against a throwaway
-    index-branch worktree) and exiting non-zero if any is rejected."""
+    """Validate the diff BASE_REF...HEAD: dry-run the publish of each
+    submitted KPAR against a throwaway index-branch worktree, print one
+    result line per submission, and exit non-zero if any is rejected."""
     changed = []
     for line in git_out(
         "diff", "--name-status", "--diff-filter=ACMR", f"{base_ref}...HEAD"
@@ -291,73 +206,45 @@ def cmd_validate(base_ref: str) -> int:
     if any(ENTRY_RE.match(p) and s != "M" for s, p in changed):
         if git("fetch", REMOTE, INDEX_BRANCH, check=False, quiet=True).returncode == 0:
             remove_worktree()
-            git("worktree", "add", "--detach", str(WORKTREE),
-                f"{REMOTE}/{INDEX_BRANCH}", quiet=True)
+            git("worktree", "add", "--detach", str(WORKTREE), f"{REMOTE}/{INDEX_BRANCH}", quiet=True)
             published = published_digests()
             dry_run = True
         else:
             print(f"note: no '{INDEX_BRANCH}' branch on {REMOTE} - skipping publish dry-run")
 
     failures = 0
-    sections = [
-        "## Index submission report",
-        "",
-        "> **Approving this change publishes the artifacts below to every "
-        "consumer of this index.** Approval is the only gate: confirm each "
-        "submission's publisher and project name are ones this submitter is "
-        "entitled to publish.",
-        "",
-    ]
-    for status, path in changed:
-        if ENTRY_RE.match(path) and status == "M":
-            sections.append(
-                f"### `{path}`\n\n**REJECTED**: published artifacts are "
-                "immutable - do not modify an existing KPAR, publish a new "
-                "version instead\n"
-            )
-            print(f"FAIL: {path} - published artifacts are immutable")
-            failures += 1
-        elif ENTRY_RE.match(path):
-            try:
-                section = describe_kpar(Path(path))
-            except Fail as exc:
-                sections.append(f"### `{Path(path).name}`\n\n**REJECTED**: {exc}\n")
-                print(f"FAIL: {exc}")
+    try:
+        for status, path in changed:
+            if ENTRY_RE.match(path) and status == "M":
+                print(f"FAIL  {path}: published artifacts are immutable - publish a new version")
                 failures += 1
-                continue
-            if dry_run:
-                digest = hashlib.sha256(Path(path).read_bytes()).hexdigest()
-                if digest in published:
-                    section += "\n**Publish check**: already published - the index-writer will skip it.\n"
-                    print(f"ok:   {path} (already published)")
+            elif ENTRY_RE.match(path):
+                try:
+                    label = kpar_label(Path(path))
+                except Fail as exc:
+                    print(f"FAIL  {path}: {exc}")
+                    failures += 1
+                    continue
+                if not dry_run:
+                    print(f"ok    {path}: {label} - not checked (no index branch yet)")
+                elif sha256(Path(path)) in published:
+                    print(f"ok    {path}: {label} - already published, index-writer will skip")
                 else:
                     try:
-                        touched = add_entry(Path(path))
-                        section += "\n**Publish check**: dry-run against the index branch succeeded - will be published on merge."
-                        section += publish_context(touched)
-                        print(f"ok:   {path} (publish dry-run ok)")
+                        add_entry(Path(path))
+                        print(f"ok    {path}: {label} - dry-run ok, publishes on merge")
                     except Fail as exc:
-                        section += f"\n**REJECTED (publish check)**: {exc}\n"
-                        print(f"FAIL: {exc}")
+                        print(f"FAIL  {path}: {exc}")
                         failures += 1
-            else:
-                print(f"ok:   {path}")
-            sections.append(section)
-        elif Path(path) in KPARS_ALLOWED:
-            print(f"ok:   {path}")
-        elif path.startswith("kpars/"):
-            sections.append(
-                f"### `{path}`\n\n**REJECTED**: submissions must be .kpar "
-                "files directly in kpars/\n"
-            )
-            print(f"FAIL: {path} - submissions must be .kpar files directly in kpars/")
-            failures += 1
-        # other files are ordinary code/docs changes, reviewed as such
-
-    if dry_run:
-        remove_worktree()
-    if len(sections) > 2:
-        print("\n".join(sections))
+            elif Path(path) in KPARS_ALLOWED:
+                pass  # ordinary docs change under kpars/
+            elif path.startswith("kpars/"):
+                print(f"FAIL  {path}: submissions must be .kpar files directly in kpars/")
+                failures += 1
+            # other files are ordinary code/docs changes, reviewed as such
+    finally:
+        if dry_run:
+            remove_worktree()
     return 1 if failures else 0
 
 
