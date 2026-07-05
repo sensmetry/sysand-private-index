@@ -40,23 +40,12 @@ scripts/index_ci.py         validation + writer logic (Python >= 3.11, stdlib on
    `main`, enable **Restrict updates**, and add **GitHub Actions** to the
    ruleset's bypass list. Nobody — including admins — can then push to
    `main` except the writer workflow. (The GitHub Actions bypass actor is
-   available in organization-owned repositories; for a personal repository,
-   use the `INDEX_WRITER_TOKEN` hardening below instead, or leave `main`
-   unprotected while trying things out.)
+   available in organization-owned repositories; on a personal repository,
+   leave `main` unprotected while trying things out.)
 3. Protect `staging`: require pull requests with review and **Require
    review from Code Owners**.
 4. Declare each publisher in `publishers.toml` and give it an owning team
    in `.github/CODEOWNERS` (see the comments in both files).
-
-**Optional hardening.** The GitHub Actions bypass in step 2 covers any
-workflow in this repo that requests `contents: write`, and repository
-collaborators with write access can author workflows. If that is too broad
-for your organization, create a dedicated machine identity (fine-grained
-PAT or GitHub App with **Contents: read and write**), save it as an Actions
-secret named `INDEX_WRITER_TOKEN`, and make that identity the only ruleset
-bypass instead of GitHub Actions. This is also required if you later add a
-workflow that must trigger on the writer's pushes to `main` (pushes made
-with a job's own token never trigger workflows).
 
 ## Publish a project
 

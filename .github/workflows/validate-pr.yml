@@ -13,8 +13,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          # Full history: validation diffs `base...HEAD`, which needs the
-          # merge base between the PR and staging.
           fetch-depth: 0
       - uses: actions/setup-python@v6
         with:

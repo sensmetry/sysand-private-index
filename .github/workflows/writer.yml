@@ -13,26 +13,12 @@ jobs:
   process-inbox:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # lets the job's token push to main and staging
+      contents: write # lets the job push to main and staging
     steps:
       - uses: actions/checkout@v7
         with:
           ref: staging
-          # Full history: the rebase-retry paths in index_ci.py need merge
-          # bases, which shallow clones don't reliably provide. This repo
-          # stays small if staging is reset periodically (see README).
           fetch-depth: 0
-          # By default the job's own token is used. If main's ruleset
-          # restricts pushes (recommended, see README), grant the "GitHub
-          # Actions" app bypass on that ruleset.
-          #
-          # Optional hardening: set an INDEX_WRITER_TOKEN secret (fine-
-          # grained PAT or GitHub App token of a dedicated identity with
-          # Contents: read/write) and make that identity the only ruleset
-          # bypass. Also required if you later add a workflow that must
-          # run on the writer's pushes to main — pushes made with the
-          # job's own token never trigger workflows.
-          token: ${{ secrets.INDEX_WRITER_TOKEN || github.token }}
 
       - uses: actions/setup-python@v6
         with:
