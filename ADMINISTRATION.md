@@ -14,14 +14,16 @@ repository to run their own. For installing and publishing, see the
 Submissions are KPAR files placed directly in `inbox/`; publisher, name,
 and version come from each KPAR's own metadata. Every push to `staging`
 runs the **writer** (`.github/workflows/writer.yml`), which adds each
-inbox entry to the index on `main` with `sysand index add` — verifying
-that everything the add touches stays inside a namespace declared in
-`publishers.toml` — and clears the inbox. Nobody edits `index/` by hand.
-The index is served to `sysand` by `raw.githubusercontent.com` from
-`main`.
+inbox entry to the index on `main` with `sysand index add` and clears the
+inbox. Nobody edits `index/` by hand. The index is served to `sysand` by
+`raw.githubusercontent.com` from `main`.
+
+**Review is the publishing gate**: whatever reviewers approve on `staging`
+gets published. To make that review meaningful, the validation workflow
+posts a report on each pull request describing every submitted KPAR
+(project, version, license, contents, digest).
 
 ```
-publishers.toml             who may publish what (edit this)
 index/                      the index consumers read (managed by automation)
 inbox/                      (staging branch) submission drop-off
 scripts/index_ci.py         validation + writer logic (Python >= 3.11, stdlib only)
@@ -39,16 +41,9 @@ scripts/index_ci.py         validation + writer logic (Python >= 3.11, stdlib on
    available in organization-owned repositories; on a personal repository,
    leave `main` unprotected while trying things out.)
 3. Protect `staging`: require pull requests with at least one approving
-   review.
-4. Declare each publisher in `publishers.toml` (see the comments there).
-
-Submission review is central: whoever can approve pull requests to
-`staging` approves all publishes. If you want each publisher's team to
-review its own submissions instead, add a
-[CODEOWNERS](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners)
-file with per-publisher rules and require code-owner review on `staging` —
-it composes cleanly with this setup, at the cost of maintaining teams and
-owner rules.
+   review. Whoever can approve pull requests to `staging` can publish —
+   that review is the entire authorization model, so choose the approvers
+   accordingly.
 
 ## What to give consumers
 

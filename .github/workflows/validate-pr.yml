@@ -1,6 +1,7 @@
 name: validate-submission
-# Fast feedback on PRs targeting staging. The writer re-validates after
-# merge; the human gate is review + CODEOWNERS on inbox/<publisher>/ paths.
+# Fast feedback on PRs targeting staging: validates each submission and
+# posts a report of what the KPAR contains, so reviewers see exactly what
+# is being added. The writer re-validates after merge.
 on:
   pull_request:
     branches: [staging]
@@ -10,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      pull-requests: write # to post the submission report as a comment
     steps:
       - uses: actions/checkout@v7
         with:
@@ -19,3 +21,14 @@ jobs:
           python-version: "3.14"
       - name: Validate inbox entries
         run: scripts/index_ci.py validate "origin/${{ github.base_ref }}"
+      - name: Post submission report on the PR
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -f kpar-report.md ]; then
+            gh pr comment "${{ github.event.pull_request.number }}" \
+              --body-file kpar-report.md --edit-last --create-if-none ||
+            gh pr comment "${{ github.event.pull_request.number }}" \
+              --body-file kpar-report.md
+          fi

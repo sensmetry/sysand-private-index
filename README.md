@@ -63,19 +63,14 @@ takes care of everything else.
    git push -u origin HEAD
    ```
 
-A validation check runs on your pull request and tells you if anything
-needs fixing. Once the reviewers for your publisher approve and merge,
-automation publishes your project — it is installable about a minute
-later. If the automation rejects your submission (for example, its
-publisher is not declared for this index), the workflow log on the merged
-commit explains why; fix and resubmit.
+A validation check runs on your pull request and posts a comment showing
+exactly what your file contains — project, version, license, model files,
+dependencies — so your reviewers know what they are approving. Once
+approved and merged, automation publishes your project; it is installable
+about a minute later.
 
-Two things to know:
-
-- A version, once published, is permanent — to change something, publish a
-  new version.
-- Your project's publisher must be declared in this index's
-  `publishers.toml` (ask your administrator to add it if it isn't yet).
+One thing to know: a version, once published, is permanent — to change
+something, publish a new version.
 
 Publishing can also be automated from your project's own repository (for
 example on every release tag) — the release job performs the same steps,
