@@ -6,15 +6,15 @@ repository to run their own. For installing and publishing, see the
 
 ## How it works
 
-| Branch | Contents | Who writes it |
-| ------ | -------- | ------------- |
-| `main` | `kpars/` (submitted artifacts), automation, docs — a normal branch | contributors via pull request |
-| `index` | the **generated index** consumers read (index files at the branch root) | the writer workflow only |
+| Branch  | Contents                                                                | Who writes it                 |
+| ------- | ----------------------------------------------------------------------- | ----------------------------- |
+| `main`  | `kpars/` (submitted artifacts), automation, docs — a normal branch      | contributors via pull request |
+| `index` | the **generated index** consumers read (index files at the branch root) | the writer workflow only      |
 
 Submissions are KPAR files placed directly in `kpars/` via pull requests
 to `main`, where they remain; publisher, name, and version come from each
 KPAR's own metadata. Every push to `main` runs the **writer**
-(`.github/workflows/writer.yml`), which *reconciles* the `index` branch
+(`.github/workflows/writer.yml`), which _reconciles_ the `index` branch
 against `kpars/`: any file not yet published (by digest) is added with
 `sysand index add`; everything else is a no-op. The writer is idempotent,
 never removes anything, and **never writes to `main`** — no branch needs
