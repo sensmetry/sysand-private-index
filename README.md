@@ -1,29 +1,107 @@
 # Private sysand index (GitHub)
 
-This repository hosts a private [sysand](https://docs.sysand.com/client/)
-index for a team on GitHub. Team members publish SysML v2 / KerML projects
-by pull request; automation validates each submission and maintains the
-index files; consumers install with the `sysand` client.
+Welcome! This repository is your team's private package index for
+SysML v2 / KerML projects, used with the
+[sysand](https://docs.sysand.com/client/) tool. If someone pointed you
+here, this is where your team's shared models live: you can **install**
+them into your own projects, and **publish** new versions for others to
+use. You don't need to understand how the repository works internally —
+find the section below that matches what you want to do, and follow it
+step by step.
 
-To run your own: copy this repository (keeping both branches) and follow
-the setup below.
+- [I want to use a project from this index](#install-a-project)
+- [I want to publish a project to this index](#publish-a-project)
+- [I administer this index](#administer-this-index) (or want to set up
+  one like it)
 
-## How it works
+## Install a project
+
+You need two things from whoever administers this index: the **index URL**
+and a **read token**. Then tell `sysand` about them (replace the
+placeholders):
+
+```sh
+export SYSAND_CRED_TEAMIDX="<index URL>**"
+export SYSAND_CRED_TEAMIDX_BEARER_TOKEN="<read token>"
+sysand add pkg:sysand/<publisher>/<project> --index "<index URL>"
+```
+
+That's it — `sysand` downloads the project and its dependencies like from
+any other index. To avoid retyping, the URL and credentials can be stored
+in `sysand.toml`; see the
+[sysand documentation](https://docs.sysand.com/client/).
+
+## Publish a project
+
+Publishing is done by adding your project's `.kpar` file (produced by
+`sysand build`) to this repository through a pull request. The automation
+takes care of everything else.
+
+1. Clone this repository's `staging` branch and create a branch for your
+   submission:
+
+   ```sh
+   git clone -b staging git@github.com:YOUR-ORG/YOUR-INDEX.git && cd YOUR-INDEX
+   git switch -c submit/my-project-1.0.0
+   ```
+
+2. Copy your `.kpar` file to
+   `inbox/<publisher>/<project name>/<version>/project.kpar`. The three
+   path parts identify your project, so they must match what is in the
+   project itself — `<publisher>` and `<project name>` as declared in its
+   metadata, `<version>` the version you are releasing:
+
+   ```sh
+   mkdir -p inbox/my-team/my-project/1.0.0
+   cp path/to/my_project-1.0.0.kpar inbox/my-team/my-project/1.0.0/project.kpar
+   ```
+
+3. Commit, push, and open a pull request **targeting the `staging`
+   branch**:
+
+   ```sh
+   git add inbox && git commit -m "submit: my-team/my-project 1.0.0"
+   git push -u origin HEAD
+   ```
+
+A validation check runs on your pull request and tells you if anything
+needs fixing. Once the reviewers for your publisher approve and merge,
+automation publishes your project — it is installable about a minute
+later. If the automation rejects your submission (for example, the path
+doesn't match the project's metadata), the workflow log on the merged
+commit explains why; fix and resubmit.
+
+Two things to know:
+
+- A version, once published, is permanent — to change something, publish a
+  new version.
+- Publishing under a `<publisher>` namespace requires approval from the
+  team that owns it (ask your administrator to add you or your namespace
+  if it doesn't exist yet).
+
+Publishing can also be automated from your project's own repository (for
+example on every release tag) — the release job performs the same steps,
+or opens the pull request with `gh pr create`.
+
+## Administer this index
+
+This section is for the person who runs the index — or wants to copy this
+repository to run their own.
+
+### How it works
 
 | Branch | Contents | Who writes it |
 | ------ | -------- | ------------- |
 | `main` | the index (`index/`), `publishers.toml`, automation | the writer workflow only |
 | `staging` | `inbox/` — submissions awaiting processing | contributors, via pull request |
 
-Publishing a project means getting its `.kpar` file into
-`inbox/<publisher>/<name>/<version>/project.kpar` on `staging`. Every push
-to `staging` runs the **writer** (`.github/workflows/writer.yml`), which
-checks the submission against `publishers.toml`, adds it to the index on
-`main` with `sysand index add`, and clears the inbox. Nobody edits `index/`
-by hand.
+Every push to `staging` runs the **writer**
+(`.github/workflows/writer.yml`), which checks each inbox entry against
+`publishers.toml`, adds it to the index on `main` with `sysand index add`,
+and clears the inbox. Nobody edits `index/` by hand. The index is served
+to `sysand` by `raw.githubusercontent.com` from `main`.
 
 ```
-README.md                   this file
 publishers.toml             who may publish what (edit this)
 index/                      the index consumers read (managed by automation)
 inbox/                      (staging branch) submission drop-off
@@ -32,7 +110,7 @@ scripts/index_ci.py         validation + writer logic (Python >= 3.11, stdlib on
 .github/CODEOWNERS          who reviews which publisher's submissions (edit this)
 ```
 
-## Setup
+### Set up your own
 
 1. Copy this repository into your organization as a **private** repo, with
    both `main` and `staging`.
@@ -47,62 +125,32 @@ scripts/index_ci.py         validation + writer logic (Python >= 3.11, stdlib on
 4. Declare each publisher in `publishers.toml` and give it an owning team
    in `.github/CODEOWNERS` (see the comments in both files).
 
-## Publish a project
+### What to give consumers
 
-Build a KPAR (`sysand build`), then:
+- **Index URL**:
+  `https://raw.githubusercontent.com/YOUR-ORG/YOUR-INDEX/refs/heads/main/index/`
+- **Read token**: a **classic** personal access token with read access to
+  this repository — typically from a shared machine account. (Fine-grained
+  tokens are unreliable against `raw.githubusercontent.com`.)
 
-```sh
-git clone -b staging git@github.com:YOUR-ORG/YOUR-INDEX.git && cd YOUR-INDEX
-git switch -c submit/my-project-1.0.0
-mkdir -p inbox/my-team/my-project/1.0.0
-cp path/to/my_project-1.0.0.kpar inbox/my-team/my-project/1.0.0/project.kpar
-git add inbox && git commit -m "submit: my-team/my-project 1.0.0"
-git push -u origin HEAD    # then open a PR targeting staging
-```
+Note that `raw.githubusercontent.com` content can lag pushes by a few
+minutes and has unpublished rate limits; it works well at team scale.
 
-The path must match the KPAR: `<publisher>` and `<name>` become the
-project's identifier `pkg:sysand/<publisher>/<name>`, and `<version>` must
-equal the version in the KPAR's metadata — mismatches are rejected. After
-the code owners merge, the project is installable within about a minute.
-
-To publish from another repository's CI (e.g. on every release tag), have
-that job perform the same steps with a token, or open the PR with
-`gh pr create`.
-
-**Never republish different bytes under an existing version** — consumers
-verify digests recorded at publish time. Release a new version instead. To
-retire a version, a maintainer runs
-`sysand index yank <iri> --version <v> --index-root index` on a branch of
-`main` and merges it (yanked versions stay downloadable for existing
-lockfiles but are not picked for new ones).
-
-## Install from the index
-
-Readers need a **classic** personal access token with read access to this
-repo (a shared machine-account token works well; fine-grained tokens are
-unreliable against `raw.githubusercontent.com`):
-
-```sh
-export SYSAND_CRED_TEAMIDX="https://raw.githubusercontent.com/YOUR-ORG/YOUR-INDEX/refs/heads/main/index/**"
-export SYSAND_CRED_TEAMIDX_BEARER_TOKEN="ghp_..."
-sysand add pkg:sysand/my-team/my-project \
-  --index https://raw.githubusercontent.com/YOUR-ORG/YOUR-INDEX/refs/heads/main/index/
-```
-
-See the [sysand documentation](https://docs.sysand.com/client/) for
-credential and index configuration in `sysand.toml`. Note that
-`raw.githubusercontent.com` content can lag pushes by a few minutes and has
-unpublished rate limits; it works well at team scale.
-
-## Maintenance
+### Maintenance
 
 - **After changing `scripts/` or `.github/` on `main`, merge `main` into
   `staging`.** The writer runs from the staging branch, so a stale staging
   runs old automation — the most common cause of writer failures.
-- The writer processes the whole inbox as one batch; a bad entry blocks the
-  batch until removed (check the failed workflow run's log).
-- Submitted KPAR files stay in `staging`'s git history after processing.
-  If the repository grows, recreate `staging` from `main` (plus
-  `inbox/README.md`).
+- The writer processes the whole inbox as one batch; a bad entry blocks
+  the batch until removed (check the failed workflow run's log).
+- To retire a published version, run
+  `sysand index yank <iri> --version <v> --index-root index` on a branch
+  of `main` and merge it through your ruleset's exception process (yanked
+  versions stay available to existing lockfiles but are not picked for new
+  ones). Never replace a published version's bytes — consumers verify
+  digests recorded at publish time.
+- Submitted `.kpar` files stay in `staging`'s git history after
+  processing. If the repository grows, recreate `staging` from `main`
+  (plus `inbox/README.md`).
 - `sysand-index-config.json.example` is not used today; its comment
   explains when it becomes relevant.
