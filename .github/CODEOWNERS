@@ -14,7 +14,7 @@
 #
 # Owners must be teams/users with write access, and enforcement requires
 # "Require review from Code Owners" in the branch protection rule for
-# `staging` (see README setup step 4).
+# `staging` (see README setup step 3).
 
 /publishers.toml        @OWNER/index-admins
 /scripts/               @OWNER/index-admins

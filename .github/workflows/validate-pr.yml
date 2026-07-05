@@ -5,18 +5,19 @@ on:
   pull_request:
     branches: [staging]
 
-permissions:
-  contents: read
-
 jobs:
   validate:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
         with:
+          # Full history: validation diffs `base...HEAD`, which needs the
+          # merge base between the PR and staging.
           fetch-depth: 0
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.13"
+          python-version: "3.14"
       - name: Validate inbox entries
         run: scripts/index_ci.py validate "origin/${{ github.base_ref }}"

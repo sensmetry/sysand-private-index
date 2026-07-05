@@ -9,32 +9,34 @@ concurrency:
   group: index-writer
   cancel-in-progress: false # queue, never cancel a write in flight
 
-# contents: write covers the github.token fallback below; when
-# INDEX_WRITER_TOKEN is set, pushes use it instead and this could be
-# narrowed back to contents: read.
-permissions:
-  contents: write
-
 jobs:
   process-inbox:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # lets the job's token push to main and staging
     steps:
       - uses: actions/checkout@v7
         with:
           ref: staging
+          # Full history: the rebase-retry paths in index_ci.py need merge
+          # bases, which shallow clones don't reliably provide. This repo
+          # stays small if staging is reset periodically (see README).
           fetch-depth: 0
-          # Production setup: INDEX_WRITER_TOKEN = fine-grained PAT
-          # (contents: read/write) or GitHub App token of an identity
-          # allowed to push to the PROTECTED main branch.
-          # Fallback github.token works only while main is unprotected
-          # (test setups), and its pushes trigger no downstream workflows
-          # (recursion guard) — fine for raw-based reads, a trap if you
-          # add a Pages deploy.
+          # By default the job's own token is used. If main's ruleset
+          # restricts pushes (recommended, see README), grant the "GitHub
+          # Actions" app bypass on that ruleset.
+          #
+          # Optional hardening: set an INDEX_WRITER_TOKEN secret (fine-
+          # grained PAT or GitHub App token of a dedicated identity with
+          # Contents: read/write) and make that identity the only ruleset
+          # bypass. Also required if you later add a workflow that must
+          # run on the writer's pushes to main — pushes made with the
+          # job's own token never trigger workflows.
           token: ${{ secrets.INDEX_WRITER_TOKEN || github.token }}
 
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.13"
+          python-version: "3.14"
 
       - name: Install sysand
         # Adjust to how you distribute sysand internally; pin the version.
