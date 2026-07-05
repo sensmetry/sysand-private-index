@@ -1,0 +1,22 @@
+# Publisher authorization, config-as-code.
+# Lives on main (the index of record); the writer refuses inbox entries
+# whose publisher namespace is not declared here.
+#
+# Verification strength grows with the epoch (priv-index-plan 0011):
+#   today   - MR review + CODEOWNERS on /inbox/<publisher>/ enforce who may
+#             submit; the fields below are reviewable intent.
+#   gateway - the same entries gain cryptographically verified OIDC claim
+#             matching (repository + workflow + environment, pinned by
+#             immutable numeric IDs, ref_protected required). Nothing to
+#             migrate; the gate strengthens in place.
+
+[publishers.example-publisher]
+# Source repository allowed to publish under this namespace.
+repository = "OWNER/example-models"
+# Immutable numeric IDs pin identity across renames (PyPI lesson):
+#   repository_id  = 0   # gh api repos/OWNER/example-models --jq .id
+#   owner_id       = 0   # gh api users/OWNER --jq .id
+# Gateway-epoch claim matching (declared now, enforced later):
+#   workflow    = "publish.yml"
+#   environment = "release"
+maintainers = ["@OWNER"]

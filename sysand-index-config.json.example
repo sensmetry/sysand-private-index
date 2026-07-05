@@ -1,0 +1,5 @@
+{
+  "_comment": "Discovery-doc seam (priv-index-plan 0011). NOT deployed today: the client's 404 fallback makes index_root = api_root = the URL consumers already use, which is correct while there is no gateway. When the publish gateway ships, copy this to index/sysand-index-config.json with real absolute URLs - consumers change nothing.",
+  "index_root": "https://raw.githubusercontent.com/OWNER/REPO/refs/heads/main/index/",
+  "api_root": "https://sysand-gateway.example.com/"
+}

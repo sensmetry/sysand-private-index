@@ -1,0 +1,36 @@
+name: index-writer
+# The single writer (priv-index-plan exploration 0011): triggered by pushes
+# to staging, serialized by the concurrency group, sole writer of main.
+on:
+  push:
+    branches: [staging]
+
+concurrency:
+  group: index-writer
+  cancel-in-progress: false # queue, never cancel a write in flight
+
+permissions:
+  contents: read # pushes use INDEX_WRITER_TOKEN, not github.token
+
+jobs:
+  process-inbox:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: staging
+          fetch-depth: 0
+          # Must be a fine-grained PAT (contents: read/write) or GitHub App
+          # token that is allowed to push to the PROTECTED main branch.
+          # Not github.token: it cannot bypass protection, and pushes made
+          # with it trigger no downstream workflows (recursion guard) —
+          # fine for raw-based reads, but a trap if you add a Pages deploy.
+          token: ${{ secrets.INDEX_WRITER_TOKEN }}
+
+      - name: Install sysand
+        # Adjust to how you distribute sysand internally (release binary,
+        # container image, pip/pipx package). Pin the version.
+        run: pipx install sysand==0.1.4
+
+      - name: Process inbox
+        run: bash scripts/process-inbox.sh

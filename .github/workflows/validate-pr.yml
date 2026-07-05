@@ -1,0 +1,19 @@
+name: validate-submission
+# Fast feedback on PRs targeting staging. The writer re-validates after
+# merge; the human gate is review + CODEOWNERS on inbox/<publisher>/ paths.
+on:
+  pull_request:
+    branches: [staging]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Validate inbox entries
+        run: bash scripts/validate-inbox.sh "origin/${{ github.base_ref }}"
