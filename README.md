@@ -73,12 +73,11 @@ takes care of everything else.
    git push -u origin HEAD
    ```
 
-A validation check runs on your pull request: it reports exactly what
-your file contains — project, version, license, model files, dependencies
-— and dry-runs the publish, so a bad submission fails the check before
-merge. (The report is in the check's log.) Once approved and merged,
-automation publishes your project; it is installable about a minute
-later.
+A validation check runs on your pull request: it identifies your
+submission (publisher, name, version, license) and dry-runs the actual
+publish, so a bad submission fails the check before merge. (The result is
+in the check's log.) Once approved and merged, automation publishes your
+project; it is installable about a minute later.
 
 One thing to know: a version, once published, is permanent — to change
 something, publish a new version.
