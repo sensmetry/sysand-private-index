@@ -81,5 +81,3 @@ minutes and has unpublished rate limits; it works well at team scale.
 - Repository size grows with publish volume (KPARs live in `kpars/`).
   Keep KPARs modest; if this becomes a problem, ask about index formats
   that store archives outside git.
-- `sysand-index-config.json.example` is not used today; its comment
-  explains when it becomes relevant.

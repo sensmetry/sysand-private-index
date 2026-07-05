@@ -1,5 +1,0 @@
-{
-  "_comment": "Not used today - do not deploy this file. The sysand client looks for sysand-index-config.json at the index URL and, when absent (404), correctly uses that URL for everything. This file becomes relevant only if your organization later runs a publish service: copy it to index/sysand-index-config.json with real URLs, and `sysand publish` starts working while consumers keep the same index URL.",
-  "index_root": "https://raw.githubusercontent.com/YOUR-ORG/YOUR-INDEX/refs/heads/index/",
-  "api_root": "https://your-publish-service.example.com/"
-}
