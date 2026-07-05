@@ -135,8 +135,17 @@ def index_worktree():
 
 
 def published_digests():
-    """Digests of every KPAR currently in the checked-out index worktree."""
-    return {digest(kpar) for kpar in WORKTREE.glob("*/*/*/project.kpar")}
+    """Digests of every already-published KPAR, read from the versions.json
+    files in the checked-out index worktree. sysand records each KPAR's
+    sha256 there, so we use that instead of re-hashing every archive."""
+    digests = set()
+    for versions_file in WORKTREE.glob("*/*/versions.json"):
+        listing = json.loads(versions_file.read_text())
+        for entry in listing.get("versions", []):
+            recorded = entry.get("kpar_digest", "")
+            if recorded.startswith("sha256:"):
+                digests.add(recorded.removeprefix("sha256:"))
+    return digests
 
 
 def add_to_index(kpar):
