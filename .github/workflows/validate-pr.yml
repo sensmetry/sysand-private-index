@@ -1,7 +1,7 @@
 name: validate-submission
 # Fast feedback on pull requests: validates each submission and
 # posts a report of what the KPAR contains, so reviewers see exactly what
-# is being added. Runs only when a PR touches inbox/.
+# is being added. Rejects modifications to already-published KPARs..
 on:
   pull_request:
     branches: [main]
@@ -19,7 +19,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.14"
-      - name: Validate inbox entries
+      - name: Validate submissions
         run: scripts/index_ci.py validate "origin/${{ github.base_ref }}"
       - name: Post submission report on the PR
         if: always()
