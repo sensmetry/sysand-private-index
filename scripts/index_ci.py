@@ -174,7 +174,7 @@ def add_entry(entry: Path) -> list[str]:
     # this batch are already staged and must not leak into this entry's set.
     changed = [
         line[3:] for line in
-        git_out("status", "--porcelain", cwd=WORKTREE).splitlines()
+        git_out("status", "--porcelain", "--untracked-files=all", cwd=WORKTREE).splitlines()
         if line[1] != " "
     ]
     if not changed:
