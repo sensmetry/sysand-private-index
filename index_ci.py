@@ -31,8 +31,6 @@ Expects: cwd = repo root, checkout of the source branch tip, push
 credentials configured on the remote.
 """
 
-from __future__ import annotations
-
 import argparse
 import hashlib
 import json
@@ -58,9 +56,7 @@ class Fail(Exception):
     """Validation or publish failure with a user-facing message."""
 
 
-def run(
-    *args: str, cwd: Path | None = None, check: bool = True, quiet: bool = False
-) -> subprocess.CompletedProcess[str]:
+def run(*args, cwd=None, check=True, quiet=False):
     return subprocess.run(
         args,
         cwd=cwd,
@@ -71,21 +67,21 @@ def run(
     )
 
 
-def git(*args: str, cwd: Path | None = None, check: bool = True, quiet: bool = False):
+def git(*args, cwd=None, check=True, quiet=False):
     return run("git", *args, cwd=cwd, check=check, quiet=quiet)
 
 
-def git_out(*args: str, cwd: Path | None = None) -> str:
+def git_out(*args, cwd=None):
     return subprocess.run(
         ("git", *args), cwd=cwd, check=True, text=True, capture_output=True
     ).stdout
 
 
-def sha256(path: Path) -> str:
+def sha256(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def kpar_label(path: Path) -> str:
+def kpar_label(path):
     """Short identity of a KPAR, from its own metadata: `pub/name X.Y.Z`."""
     try:
         with zipfile.ZipFile(path) as zf:
@@ -97,8 +93,8 @@ def kpar_label(path: Path) -> str:
     return f"{project.get('publisher')}/{project.get('name')} {project.get('version')}{suffix}"
 
 
-def find_entries() -> list[Path]:
-    entries: list[Path] = []
+def find_entries():
+    entries = []
     for path in sorted(KPARS.rglob("*")):
         if path.is_dir() or path in KPARS_ALLOWED:
             continue
@@ -108,17 +104,17 @@ def find_entries() -> list[Path]:
     return entries
 
 
-def published_digests() -> set[str]:
+def published_digests():
     """sha256 of every KPAR already on the index branch (in the worktree)."""
     return {sha256(p) for p in WORKTREE.glob("*/*/*/project.kpar")}
 
 
-def remove_worktree() -> None:
+def remove_worktree():
     git("worktree", "remove", "--force", str(WORKTREE), check=False, quiet=True)
     git("worktree", "prune", quiet=True)
 
 
-def add_entry(entry: Path) -> None:
+def add_entry(entry):
     """Add one KPAR to the index worktree; sysand derives and validates the
     project's identity from the KPAR metadata. Stage the result."""
     result = run("sysand", "index", "add", "--kpar-path", str(entry),
@@ -141,7 +137,7 @@ def add_entry(entry: Path) -> None:
     git("add", "-A", cwd=WORKTREE, quiet=True)
 
 
-def publish_batch(entries: list[Path]) -> None:
+def publish_batch(entries):
     """Publish every not-yet-published entry to the index branch. The
     index-writer is serialized and the sole writer of that branch, so the
     push does not race; a failed push means re-run the job."""
@@ -170,7 +166,7 @@ def publish_batch(entries: list[Path]) -> None:
         remove_worktree()
 
 
-def cmd_reconcile() -> int:
+def cmd_reconcile():
     run("sysand", "--version", quiet=True)  # fail fast if missing
     if git("fetch", REMOTE, INDEX_BRANCH, check=False, quiet=True).returncode != 0:
         raise Fail(
@@ -185,7 +181,7 @@ def cmd_reconcile() -> int:
     return 0
 
 
-def cmd_validate(base_ref: str) -> int:
+def cmd_validate(base_ref):
     """Validate the diff BASE_REF...HEAD: dry-run the publish of each
     submitted KPAR against a throwaway index-branch worktree, print one
     result line per submission, and exit non-zero if any is rejected."""
@@ -202,7 +198,7 @@ def cmd_validate(base_ref: str) -> int:
 
     # Dry-run target: the real index branch in a throwaway worktree.
     dry_run = False
-    published: set[str] = set()
+    published = set()
     if any(ENTRY_RE.match(p) and s != "M" for s, p in changed):
         if git("fetch", REMOTE, INDEX_BRANCH, check=False, quiet=True).returncode == 0:
             remove_worktree()
@@ -248,7 +244,7 @@ def cmd_validate(base_ref: str) -> int:
     return 1 if failures else 0
 
 
-def main() -> int:
+def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("reconcile", help="run the index-writer (kpars/ -> index branch)")
