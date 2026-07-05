@@ -9,28 +9,32 @@ concurrency:
   group: index-writer
   cancel-in-progress: false # queue, never cancel a write in flight
 
+# contents: write covers the github.token fallback below; when
+# INDEX_WRITER_TOKEN is set, pushes use it instead and this could be
+# narrowed back to contents: read.
 permissions:
-  contents: read # pushes use INDEX_WRITER_TOKEN, not github.token
+  contents: write
 
 jobs:
   process-inbox:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: staging
           fetch-depth: 0
-          # Must be a fine-grained PAT (contents: read/write) or GitHub App
-          # token that is allowed to push to the PROTECTED main branch.
-          # Not github.token: it cannot bypass protection, and pushes made
-          # with it trigger no downstream workflows (recursion guard) —
-          # fine for raw-based reads, but a trap if you add a Pages deploy.
-          token: ${{ secrets.INDEX_WRITER_TOKEN }}
+          # Production setup: INDEX_WRITER_TOKEN = fine-grained PAT
+          # (contents: read/write) or GitHub App token of an identity
+          # allowed to push to the PROTECTED main branch.
+          # Fallback github.token works only while main is unprotected
+          # (test setups), and its pushes trigger no downstream workflows
+          # (recursion guard) — fine for raw-based reads, a trap if you
+          # add a Pages deploy.
+          token: ${{ secrets.INDEX_WRITER_TOKEN || github.token }}
 
       - name: Install sysand
-        # Adjust to how you distribute sysand internally (release binary,
-        # container image, pip/pipx package). Pin the version.
-        run: pipx install sysand==0.1.4
+        # Adjust to how you distribute sysand internally; pin the version.
+        run: pipx install sysand==0.1.5
 
       - name: Process inbox
         run: python3 scripts/index_ci.py process-inbox
