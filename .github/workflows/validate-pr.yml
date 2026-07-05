@@ -23,4 +23,4 @@ jobs:
         # Needed for the publish dry-run; pin the same version as the index-writer.
         run: pipx install sysand==0.1.5
       - name: Validate submissions
-        run: ./index_ci.py validate "origin/${{ github.base_ref }}"
+        run: ./manage_index.py validate "origin/${{ github.base_ref }}"
