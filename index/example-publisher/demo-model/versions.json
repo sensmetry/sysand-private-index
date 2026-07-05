@@ -1,6 +1,12 @@
 {
   "versions": [
     {
+      "version": "1.0.2",
+      "usage": [],
+      "kpar_size": 575,
+      "kpar_digest": "sha256:030ae84218bbe231286cc2357775df0a496642fe90caa6e03dcf61d76a2793a6"
+    },
+    {
       "version": "1.0.0",
       "usage": [],
       "kpar_size": 574,
