@@ -1,12 +1,12 @@
 # Who may publish what. The writer refuses any submission whose publisher
-# namespace (the first path segment under inbox/) is not declared here.
+# (read from the KPAR's own metadata) is not declared here — nothing can be
+# published into an undeclared namespace.
 #
-# WHO may submit for a declared namespace is enforced by pull-request
-# review: give each namespace an owning team in .github/CODEOWNERS.
-#
-# Fields other than the table name are informational today — they document
-# intent for reviewers (where publishes come from, who to ask). Keep them
-# accurate; future sysand publishing tooling is expected to verify them.
+# WHO may submit is enforced by merge review on the staging branch; this
+# file defines WHAT namespaces exist. Fields other than the table name are
+# informational — they document intent for reviewers (where publishes come
+# from, who to ask). Keep them accurate; future sysand publishing tooling
+# is expected to verify them.
 
 [publishers.example-publisher]
 # Source repository this publisher's projects are released from.

@@ -46,16 +46,14 @@ takes care of everything else.
    ```
 
 2. Copy your `.kpar` file — exactly as `sysand build` produced it, no
-   renaming — into your publisher's folder in the inbox:
+   renaming — into the inbox:
 
    ```sh
-   mkdir -p inbox/my-team
-   cp path/to/my_project-1.0.0.kpar inbox/my-team/
+   cp path/to/my_project-1.0.0.kpar inbox/
    ```
 
-   The folder name is your publisher namespace (it decides who reviews
-   your submission); the project's name and version are read from the
-   file itself.
+   Everything about your project (publisher, name, version) is read from
+   the file itself.
 
 3. Commit, push, and open a pull request **targeting the `staging`
    branch**:
@@ -68,17 +66,16 @@ takes care of everything else.
 A validation check runs on your pull request and tells you if anything
 needs fixing. Once the reviewers for your publisher approve and merge,
 automation publishes your project — it is installable about a minute
-later. If the automation rejects your submission (for example, the file's
-publisher doesn't match the folder you placed it in), the workflow log on
-the merged commit explains why; fix and resubmit.
+later. If the automation rejects your submission (for example, its
+publisher is not declared for this index), the workflow log on the merged
+commit explains why; fix and resubmit.
 
 Two things to know:
 
 - A version, once published, is permanent — to change something, publish a
   new version.
-- Publishing under a `<publisher>` namespace requires approval from the
-  team that owns it (ask your administrator to add you or your namespace
-  if it doesn't exist yet).
+- Your project's publisher must be declared in this index's
+  `publishers.toml` (ask your administrator to add it if it isn't yet).
 
 Publishing can also be automated from your project's own repository (for
 example on every release tag) — the release job performs the same steps,

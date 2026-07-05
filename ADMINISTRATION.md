@@ -11,14 +11,14 @@ repository to run their own. For installing and publishing, see the
 | `main` | the index (`index/`), `publishers.toml`, automation | the writer workflow only |
 | `staging` | `inbox/` — submissions awaiting processing | contributors, via pull request |
 
-Submissions are KPAR files at `inbox/<publisher>/<file>.kpar`; the
-publisher folder routes review (CODEOWNERS), everything else comes from
-the KPAR's metadata. Every push to `staging` runs the **writer**
-(`.github/workflows/writer.yml`), which checks each inbox entry against
-`publishers.toml`, adds it to the index on `main` with `sysand index add`
-— verifying that everything the add touches stays inside the submitter's
-namespace — and clears the inbox. Nobody edits `index/` by hand. The
-index is served to `sysand` by `raw.githubusercontent.com` from `main`.
+Submissions are KPAR files placed directly in `inbox/`; publisher, name,
+and version come from each KPAR's own metadata. Every push to `staging`
+runs the **writer** (`.github/workflows/writer.yml`), which adds each
+inbox entry to the index on `main` with `sysand index add` — verifying
+that everything the add touches stays inside a namespace declared in
+`publishers.toml` — and clears the inbox. Nobody edits `index/` by hand.
+The index is served to `sysand` by `raw.githubusercontent.com` from
+`main`.
 
 ```
 publishers.toml             who may publish what (edit this)
@@ -26,7 +26,6 @@ index/                      the index consumers read (managed by automation)
 inbox/                      (staging branch) submission drop-off
 scripts/index_ci.py         validation + writer logic (Python >= 3.11, stdlib only)
 .github/workflows/          writer + pull-request validation
-.github/CODEOWNERS          who reviews which publisher's submissions (edit this)
 ```
 
 ## Set up your own
@@ -39,10 +38,17 @@ scripts/index_ci.py         validation + writer logic (Python >= 3.11, stdlib on
    `main` except the writer workflow. (The GitHub Actions bypass actor is
    available in organization-owned repositories; on a personal repository,
    leave `main` unprotected while trying things out.)
-3. Protect `staging`: require pull requests with review and **Require
-   review from Code Owners**.
-4. Declare each publisher in `publishers.toml` and give it an owning team
-   in `.github/CODEOWNERS` (see the comments in both files).
+3. Protect `staging`: require pull requests with at least one approving
+   review.
+4. Declare each publisher in `publishers.toml` (see the comments there).
+
+Submission review is central: whoever can approve pull requests to
+`staging` approves all publishes. If you want each publisher's team to
+review its own submissions instead, add a
+[CODEOWNERS](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners)
+file with per-publisher rules and require code-owner review on `staging` —
+it composes cleanly with this setup, at the cost of maintaining teams and
+owner rules.
 
 ## What to give consumers
 
