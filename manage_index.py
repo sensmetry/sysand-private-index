@@ -25,7 +25,7 @@ current index from git (never from a served copy), adds new packages with
 writer of the ``index`` branch, so its push never races; a failed push simply
 means "run reconcile again".
 
-Requires Python >= 3.11, git, and sysand on PATH. Run from the repository root
+Requires Python >= 3.12, git, and sysand on PATH. Run from the repository root
 with push credentials configured on the remote.
 """
 
