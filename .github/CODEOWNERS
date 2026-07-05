@@ -1,6 +1,21 @@
-# Review requirements per publisher namespace: submissions (PRs to staging)
-# touching a publisher's inbox path require that team's approval. Add one
-# line per publisher declared in publishers.toml.
+# Code owners: who must approve which changes.
+# Syntax and semantics: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# How this file is used here:
+# - Submissions are pull requests to `staging` that add files under
+#   inbox/<publisher>/... . The entry for /inbox/<publisher>/ names the
+#   team that owns that publisher namespace, so their approval is required
+#   before a submission can merge — this is what authorizes publishing.
+# - Add one /inbox/<publisher>/ line for every publisher declared in
+#   publishers.toml, owned by that publisher's team.
+# - The entries for publishers.toml, scripts/ and .github/ ensure changes
+#   to the authorization config and the automation itself are approved by
+#   the index administrators.
+#
+# Owners must be teams/users with write access, and enforcement requires
+# "Require review from Code Owners" in the branch protection rule for
+# `staging` (see README setup step 4).
+
 /publishers.toml        @OWNER/index-admins
 /scripts/               @OWNER/index-admins
 /.github/               @OWNER/index-admins
