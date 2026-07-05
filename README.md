@@ -39,7 +39,10 @@ scripts/index_ci.py         validation + writer logic (Python >= 3.11, stdlib on
 2. Lock `main` with a ruleset (**Settings → Rules → Rulesets**): target
    `main`, enable **Restrict updates**, and add **GitHub Actions** to the
    ruleset's bypass list. Nobody — including admins — can then push to
-   `main` except the writer workflow.
+   `main` except the writer workflow. (The GitHub Actions bypass actor is
+   available in organization-owned repositories; for a personal repository,
+   use the `INDEX_WRITER_TOKEN` hardening below instead, or leave `main`
+   unprotected while trying things out.)
 3. Protect `staging`: require pull requests with review and **Require
    review from Code Owners**.
 4. Declare each publisher in `publishers.toml` and give it an owning team
