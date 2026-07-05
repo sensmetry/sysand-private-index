@@ -32,9 +32,13 @@ jobs:
           # add a Pages deploy.
           token: ${{ secrets.INDEX_WRITER_TOKEN || github.token }}
 
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
       - name: Install sysand
         # Adjust to how you distribute sysand internally; pin the version.
         run: pipx install sysand==0.1.5
 
       - name: Process inbox
-        run: python3 scripts/index_ci.py process-inbox
+        run: scripts/index_ci.py process-inbox

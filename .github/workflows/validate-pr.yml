@@ -15,5 +15,8 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
       - name: Validate inbox entries
-        run: python3 scripts/index_ci.py validate "origin/${{ github.base_ref }}"
+        run: scripts/index_ci.py validate "origin/${{ github.base_ref }}"
