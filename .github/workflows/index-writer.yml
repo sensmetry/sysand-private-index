@@ -1,5 +1,5 @@
 name: index-writer
-# The writer: runs on every push to main and reconciles the generated
+# The index-writer: runs on every push to main and reconciles the generated
 # `index` branch against kpars/ - anything not yet published gets
 # published; everything else is a no-op. Idempotent; never writes to main.
 on:

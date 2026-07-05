@@ -2,7 +2,7 @@
 """CI logic for this private sysand index.
 
 Subcommands:
-  reconcile         The writer: publish every kpars/ file not yet in the
+  reconcile         The index-writer: publish every kpars/ file not yet in the
                     generated index branch. Idempotent - already-published
                     files (by digest) are skipped; nothing is ever removed.
   validate BASEREF  Pre-merge validation for MRs/PRs: describes every
@@ -13,17 +13,17 @@ Subcommands:
 
 A submission is a KPAR file exactly as `sysand build` produced it, placed
 directly in kpars/ on the default branch, where it remains: the folder is
-the declarative set of submitted artifacts, and the writer reconciles the
+the declarative set of submitted artifacts, and the index-writer reconciles the
 index branch against it. The project's identity - publisher, name,
 version - comes from the KPAR's own metadata. Review of the pull/merge
 request is the publishing gate: what reviewers approve gets published.
 
 Invariants:
-- The writer runs serialized (GitHub `concurrency:` / GitLab `resource_group`).
+- The index-writer runs serialized (GitHub `concurrency:` / GitLab `resource_group`).
 - Prior index state is read from git, never from a deployed/served copy.
-- Only the writer's CI identity may push to the index branch (protected);
-  the writer never writes to the default branch.
-- Published versions are immutable: the writer only ever adds, and a
+- Only the index-writer's CI identity may push to the index branch (protected);
+  the index-writer never writes to the default branch.
+- Published versions are immutable: the index-writer only ever adds, and a
   changed KPAR under an already-published version is an error.
 
 Requires: Python >= 3.11, git, sysand on PATH.
@@ -184,7 +184,7 @@ def add_entry(entry: Path) -> list[str]:
 
 def publish_batch(entries: list[Path]) -> None:
     """Apply all entries to a fresh checkout of the index branch; retry the
-    whole batch on push races (rebase-retry, serialized writer)."""
+    whole batch on push races (rebase-retry, serialized index-writer)."""
     summary = ""  # set after filtering; commit message built below
     for attempt in range(1, MAX_RETRIES + 1):
         git("fetch", REMOTE, INDEX_BRANCH, quiet=True)
@@ -328,7 +328,7 @@ def cmd_validate(base_ref: str) -> int:
             if dry_run:
                 digest = hashlib.sha256(Path(path).read_bytes()).hexdigest()
                 if digest in published:
-                    section += "\n**Publish check**: already published - the writer will skip it.\n"
+                    section += "\n**Publish check**: already published - the index-writer will skip it.\n"
                     print(f"ok:   {path} (already published)")
                 else:
                     try:
@@ -364,7 +364,7 @@ def cmd_validate(base_ref: str) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
-    sub.add_parser("reconcile", help="run the writer (kpars/ -> index branch)")
+    sub.add_parser("reconcile", help="run the index-writer (kpars/ -> index branch)")
     validate = sub.add_parser("validate", help="validate a submission diff")
     validate.add_argument("base_ref", help="merge base, e.g. origin/main")
     args = parser.parse_args()

@@ -6,17 +6,17 @@ repository to run their own. For installing and publishing, see the
 
 ## How it works
 
-| Branch  | Contents                                                                | Who writes it                 |
-| ------- | ----------------------------------------------------------------------- | ----------------------------- |
-| `main`  | `kpars/` (submitted artifacts), automation, docs — a normal branch      | contributors via pull request |
-| `index` | the **generated index** consumers read (index files at the branch root) | the writer workflow only      |
+| Branch  | Contents                                                                | Who writes it                  |
+| ------- | ----------------------------------------------------------------------- | ------------------------------ |
+| `main`  | `kpars/` (submitted artifacts), automation, docs — a normal branch      | contributors via pull request  |
+| `index` | the **generated index** consumers read (index files at the branch root) | the index-writer workflow only |
 
 Submissions are KPAR files placed directly in `kpars/` via pull requests
 to `main`, where they remain; publisher, name, and version come from each
-KPAR's own metadata. Every push to `main` runs the **writer**
-(`.github/workflows/writer.yml`), which _reconciles_ the `index` branch
+KPAR's own metadata. Every push to `main` runs the **index-writer**
+(`.github/workflows/index-writer.yml`), which _reconciles_ the `index` branch
 against `kpars/`: any file not yet published (by digest) is added with
-`sysand index add`; everything else is a no-op. The writer is idempotent,
+`sysand index add`; everything else is a no-op. The index-writer is idempotent,
 never removes anything, and **never writes to `main`** — no branch needs
 to grant automation any special rights on `main`. Nobody edits the
 `index` branch by hand. The index is served to `sysand` by
@@ -31,9 +31,9 @@ check **required** in branch protection so a failing submission cannot
 be merged.
 
 ```
-kpars/                      submitted artifacts (the writer publishes from here)
-scripts/index_ci.py         validation + writer logic (Python >= 3.11, stdlib only)
-.github/workflows/          writer + pull-request validation
+kpars/                      submitted artifacts (the index-writer publishes from here)
+scripts/index_ci.py         validation + index-writer logic (Python >= 3.11, stdlib only)
+.github/workflows/          index-writer + pull-request validation
 ```
 
 ## Set up your own
@@ -47,14 +47,14 @@ scripts/index_ci.py         validation + writer logic (Python >= 3.11, stdlib on
    in the install and publish sections with your real values, and say who
    to ask for a read token — consumers are sent to the README, not here.
 4. Protect `index` with a ruleset: **Restrict updates**, with **GitHub
-   Actions** as the only bypass — the writer is then the only thing that
+   Actions** as the only bypass — the index-writer is then the only thing that
    can touch the published index. (The GitHub Actions bypass actor is
    available in organization-owned repositories; on a personal repository,
    leave `index` unprotected while trying things out.)
 
 If the `index` branch is ever missing (it holds only generated content),
 recreate it: `git switch --orphan index`, run `sysand index init`, commit,
-push — the next writer run republishes everything in `kpars/`.
+push — the next index-writer run republishes everything in `kpars/`.
 
 ## What to give consumers
 
@@ -69,9 +69,9 @@ minutes and has unpublished rate limits; it works well at team scale.
 
 ## Maintenance
 
-- The writer processes submissions as one batch; a bad file blocks the
+- The index-writer processes submissions as one batch; a bad file blocks the
   batch until removed (check the failed workflow run's log). Removing a
-  file from `kpars/` does **not** unpublish it — the writer only adds.
+  file from `kpars/` does **not** unpublish it — the index-writer only adds.
 - To retire a published version, run
   `sysand index yank <iri> --version <v> --index-root .` on a checkout of
   the `index` branch and push it through your ruleset's exception process
