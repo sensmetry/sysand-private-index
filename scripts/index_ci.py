@@ -5,10 +5,11 @@ Subcommands:
   reconcile         The writer: publish every kpars/ file not yet in the
                     generated index branch. Idempotent - already-published
                     files (by digest) are skipped; nothing is ever removed.
-  validate BASEREF  Pre-merge validation for MRs/PRs.
-                    Writes kpar-report.md describing every submission so
-                    reviewers see exactly what is being added (CI posts it
-                    on the PR/MR).
+  validate BASEREF  Pre-merge validation for MRs/PRs: describes every
+                    submission and dry-runs the actual publish against a
+                    throwaway checkout of the index branch (nothing is
+                    pushed). Writes kpar-report.md so CI can post it on
+                    the PR/MR.
 
 A submission is a KPAR file exactly as `sysand build` produced it, placed
 directly in kpars/ on the default branch, where it remains: the folder is
@@ -230,7 +231,8 @@ def cmd_reconcile() -> int:
 
 def cmd_validate(base_ref: str) -> int:
     """Validate the diff BASE_REF...HEAD and write kpar-report.md
-    describing each submission for reviewers."""
+    describing each submission for reviewers, including a dry-run of the
+    actual publish against a throwaway index-branch worktree."""
     changed = []
     for line in git_out(
         "diff", "--name-status", "--diff-filter=ACMR", f"{base_ref}...HEAD"
@@ -241,6 +243,19 @@ def cmd_validate(base_ref: str) -> int:
     if not changed:
         print("No changes.")
         return 0
+
+    # Dry-run target: the real index branch in a throwaway worktree.
+    dry_run = False
+    published: set[str] = set()
+    if any(ENTRY_RE.match(p) and s != "M" for s, p in changed):
+        if git("fetch", REMOTE, INDEX_BRANCH, check=False, quiet=True).returncode == 0:
+            remove_worktree()
+            git("worktree", "add", "--detach", str(WORKTREE),
+                f"{REMOTE}/{INDEX_BRANCH}", quiet=True)
+            published = published_digests()
+            dry_run = True
+        else:
+            print(f"note: no '{INDEX_BRANCH}' branch on {REMOTE} - skipping publish dry-run")
 
     failures = 0
     sections = ["## Index submission report", ""]
@@ -255,12 +270,29 @@ def cmd_validate(base_ref: str) -> int:
             failures += 1
         elif ENTRY_RE.match(path):
             try:
-                sections.append(describe_kpar(Path(path)))
-                print(f"ok:   {path}")
+                section = describe_kpar(Path(path))
             except Fail as exc:
                 sections.append(f"### `{Path(path).name}`\n\n**REJECTED**: {exc}\n")
                 print(f"FAIL: {exc}")
                 failures += 1
+                continue
+            if dry_run:
+                digest = hashlib.sha256(Path(path).read_bytes()).hexdigest()
+                if digest in published:
+                    section += "\n**Publish check**: already published - the writer will skip it.\n"
+                    print(f"ok:   {path} (already published)")
+                else:
+                    try:
+                        add_entry(Path(path))
+                        section += "\n**Publish check**: dry-run against the index branch succeeded - will be published on merge.\n"
+                        print(f"ok:   {path} (publish dry-run ok)")
+                    except Fail as exc:
+                        section += f"\n**REJECTED (publish check)**: {exc}\n"
+                        print(f"FAIL: {exc}")
+                        failures += 1
+            else:
+                print(f"ok:   {path}")
+            sections.append(section)
         elif Path(path) in KPARS_ALLOWED:
             print(f"ok:   {path}")
         elif path.startswith("kpars/"):
@@ -272,6 +304,8 @@ def cmd_validate(base_ref: str) -> int:
             failures += 1
         # other files are ordinary code/docs changes, reviewed as such
 
+    if dry_run:
+        remove_worktree()
     if len(sections) > 2:
         report = "\n".join(sections)
         REPORT.write_text(report)
