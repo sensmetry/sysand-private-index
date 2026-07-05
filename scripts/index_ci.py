@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
-"""CI logic for a staged-writer private sysand index.
-
-Design: priv-index-plan explorations 0011 (staged writer) and 0008 (race
-lessons).
+"""CI logic for this private sysand index.
 
 Subcommands:
   process-inbox     The writer: publish inbox/ entries from the staging
@@ -102,8 +99,9 @@ def parse_entry(path: str) -> Entry | None:
 
 
 def declared_publishers() -> set[str]:
-    """publishers.toml is read from the index branch: config-as-code lives
-    with the index of record, not with the submission."""
+    """publishers.toml is read from the index branch, so a submission
+    cannot grant itself a publisher namespace. WHO may submit for a
+    declared namespace is enforced by review (CODEOWNERS) on staging."""
     text = git_out("show", f"{REMOTE}/{INDEX_BRANCH}:publishers.toml")
     return set(tomllib.loads(text).get("publishers", {}))
 

@@ -1,6 +1,6 @@
 # Review requirements per publisher namespace: submissions (PRs to staging)
-# touching a publisher's inbox path require that team's approval.
-# This is the submission gate of the MR path (priv-index-plan 0009 S1/S2).
+# touching a publisher's inbox path require that team's approval. Add one
+# line per publisher declared in publishers.toml.
 /publishers.toml        @OWNER/index-admins
 /scripts/               @OWNER/index-admins
 /.github/               @OWNER/index-admins

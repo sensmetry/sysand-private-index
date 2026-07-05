@@ -1,22 +1,14 @@
-# Publisher authorization, config-as-code.
-# Lives on main (the index of record); the writer refuses inbox entries
-# whose publisher namespace is not declared here.
+# Who may publish what. The writer refuses any submission whose publisher
+# namespace (the first path segment under inbox/) is not declared here.
 #
-# Verification strength grows with the epoch (priv-index-plan 0011):
-#   today   - MR review + CODEOWNERS on /inbox/<publisher>/ enforce who may
-#             submit; the fields below are reviewable intent.
-#   gateway - the same entries gain cryptographically verified OIDC claim
-#             matching (repository + workflow + environment, pinned by
-#             immutable numeric IDs, ref_protected required). Nothing to
-#             migrate; the gate strengthens in place.
+# WHO may submit for a declared namespace is enforced by pull-request
+# review: give each namespace an owning team in .github/CODEOWNERS.
+#
+# Fields other than the table name are informational today — they document
+# intent for reviewers (where publishes come from, who to ask). Keep them
+# accurate; future sysand publishing tooling is expected to verify them.
 
 [publishers.example-publisher]
-# Source repository allowed to publish under this namespace.
+# Source repository this publisher's projects are released from.
 repository = "OWNER/example-models"
-# Immutable numeric IDs pin identity across renames (PyPI lesson):
-#   repository_id  = 0   # gh api repos/OWNER/example-models --jq .id
-#   owner_id       = 0   # gh api users/OWNER --jq .id
-# Gateway-epoch claim matching (declared now, enforced later):
-#   workflow    = "publish.yml"
-#   environment = "release"
 maintainers = ["@OWNER"]

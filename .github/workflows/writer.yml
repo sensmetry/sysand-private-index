@@ -1,6 +1,6 @@
 name: index-writer
-# The single writer (priv-index-plan exploration 0011): triggered by pushes
-# to staging, serialized by the concurrency group, sole writer of main.
+# The writer: triggered by pushes to staging, serialized by the concurrency
+# group, and the only thing that writes to main.
 on:
   push:
     branches: [staging]
