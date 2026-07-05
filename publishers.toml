@@ -10,5 +10,5 @@
 
 [publishers.example-publisher]
 # Source repository this publisher's projects are released from.
-repository = "OWNER/example-models"
-maintainers = ["@OWNER"]
+repository = "YOUR-ORG/example-models"
+maintainers = ["@alice"]

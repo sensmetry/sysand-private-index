@@ -16,7 +16,7 @@
 # "Require review from Code Owners" in the branch protection rule for
 # `staging` (see README setup step 3).
 
-/publishers.toml        @OWNER/index-admins
-/scripts/               @OWNER/index-admins
-/.github/               @OWNER/index-admins
-/inbox/example-publisher/  @OWNER/example-models-team
+/publishers.toml        @YOUR-ORG/index-admins
+/scripts/               @YOUR-ORG/index-admins
+/.github/               @YOUR-ORG/index-admins
+/inbox/example-publisher/  @YOUR-ORG/example-models-team
