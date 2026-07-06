@@ -33,7 +33,9 @@ repository's `index` branch, where folders are laid out as
 That's all there is to it. `sysand` downloads the project and its
 dependencies just like it would from any other index. To avoid retyping,
 you can store the URL and credentials in `sysand.toml`; see the
-[sysand documentation](https://docs.sysand.com/client/).
+[sysand documentation](https://docs.sysand.com/client/). If you want this
+to be your default index so you can drop the `--index` option, follow
+[Configure a different default index](https://sysand.com/client/how-to/configure-default-index/).
 
 If you see `no resolver was able to resolve the IRI`, check three things:
 (1) the token (GitHub reports bad auth as a 404, so a bad token looks like
