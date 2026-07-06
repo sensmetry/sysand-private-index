@@ -1,3 +1,6 @@
+<!-- Structure and wording kept in sync with the GitLab example
+     repository's ADMINISTRATION.md; only platform details differ. -->
+
 # Administering this index
 
 This page is for the person setting up an index from this repository (and
@@ -6,13 +9,16 @@ running it afterwards). For installing and publishing, see the
 
 ## How it works
 
+This repository implements the [reviewed team index
+model](https://docs.sysand.com/client/explanation/reviewed-team-index/):
+contributors add KPAR files to `kpars/` through reviewed pull requests,
+and automation publishes whatever lands on `main`.
+
 | Branch  | Contents                                                                | Who writes it                  |
 | ------- | ----------------------------------------------------------------------- | ------------------------------ |
 | `main`  | `kpars/` (submitted artifacts), automation, docs; a normal branch       | contributors via pull request  |
 | `index` | the **generated index** consumers read (index files at the branch root) | the index-writer workflow only |
 
-Submissions are KPAR files placed directly in `kpars/` via pull requests to
-`main`. Publisher, name, and version come from each KPAR's own metadata.
 Every push to `main` runs the **index-writer**
 (`.github/workflows/index-writer.yml`), which _reconciles_ the `index`
 branch against `kpars/`: any file not yet published (matched by digest) is
@@ -21,12 +27,12 @@ index-writer is idempotent, never removes anything, and **never writes to
 `main`**. The index is served to `sysand` by `raw.githubusercontent.com`
 from the `index` branch.
 
-**Review is the publishing gate**: whatever reviewers approve on `main`
-gets published. To make that review meaningful, the validation check
-identifies every submitted KPAR (publisher, name, version, license) in its
-log, dry-runs the publish, and rejects modifications to already-submitted
-files (published versions are immutable). Make this check **required** in
-branch protection so a failing submission cannot be merged.
+The validation check identifies every submitted KPAR (publisher, name,
+version, license) in its log, dry-runs the publish, and rejects
+modifications to already-submitted files (published versions are
+immutable). Review is the publishing gate, so make this check
+**required** in branch protection: a failing submission then cannot be
+merged.
 
 ```
 kpars/                      submitted artifacts (the index-writer publishes from here)
@@ -106,7 +112,7 @@ you can prove the whole pipeline works end to end with a throwaway package:
    [Publish a project](README.md#publish-a-project)) and confirm the
    validation check passes.
 3. Merge it, confirm the index-writer run is green, and check the package
-   appears under your index URL.
+   appears on the `index` branch under `<publisher>/<project>/`.
 4. Install it with the read token, exactly as a consumer would.
 5. Retire the throwaway with the yank procedure under
    [Maintenance](#maintenance) (and remove its `.kpar` from `kpars/`).

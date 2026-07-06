@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Maintain this private sysand index from CI.
+"""Maintain this private Sysand index from CI.
 
 Two subcommands, both run by the repository's CI:
 
@@ -319,6 +319,7 @@ def check_change(status, path, published):
 
 
 def validate(base_ref):
+    warn_placeholders()
     changes = changed_files(base_ref)
     if not changes:
         warn_no_submissions()
@@ -348,6 +349,24 @@ def validate(base_ref):
     if not reported:
         warn_no_submissions()
     return 1 if rejected else 0
+
+
+def warn_placeholders():
+    """A copied template whose README still contains YOUR-ORG/YOUR-INDEX
+    style placeholders ships broken instructions to every consumer; the
+    easiest place to notice is the check every submission already runs."""
+    try:
+        readme = Path("README.md").read_text(encoding="utf-8")
+    except OSError:
+        return
+    if "YOUR-" in readme:
+        message = (
+            "README.md still contains YOUR- placeholders - search-and-replace "
+            "them for your instance (see ADMINISTRATION.md, 'Set up your own')."
+        )
+        print(message)
+        if os.environ.get("GITHUB_ACTIONS") == "true":
+            print(f"::warning::{message}")  # surfaces as an annotation on GitHub
 
 
 def warn_no_submissions():
