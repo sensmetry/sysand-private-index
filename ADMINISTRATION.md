@@ -113,12 +113,22 @@ you can prove the whole pipeline works end to end with a throwaway package:
   fails so you notice (check the workflow run's log). Remove or rebuild the
   offending file to clear it. Removing a file from `kpars/` does **not**
   unpublish it; the index-writer only adds.
-- To retire a published version, run
-  `sysand index yank <iri> --version <v> --index-root .` on a checkout of
-  the `index` branch and push it through your ruleset's exception process
-  (yanked versions stay available to existing lockfiles but are not picked
-  for new ones). Never replace a published version's bytes, because
-  consumers verify the digest recorded at publish time.
+- To retire a published version, yank it on the `index` branch. Only the
+  index-writer can normally push there, so grant yourself push access for
+  the moment: in **Settings → Rules → Rulesets**, add yourself (or "Repository
+  admin") to the `index` ruleset's bypass list. Then:
+
+  ```sh
+  git switch index && git pull
+  sysand index yank <iri> --version <v> --index-root .
+  git commit -am "yank <iri> <v>" && git push
+  ```
+
+  Remove yourself from the bypass list again afterwards. Yanked versions
+  stay available to existing lockfiles but are not picked for new ones.
+  Never replace a published version's bytes, because consumers verify the
+  digest recorded at publish time.
+
 - Repository size grows with publish volume (KPARs live in `kpars/`). Keep
   KPARs modest; if this becomes a problem, ask about index formats that
   store archives outside git.
