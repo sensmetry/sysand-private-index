@@ -27,11 +27,15 @@ means "run reconcile again".
 
 Requires Python >= 3.12, git, and sysand on PATH. Run from the repository root
 with push credentials configured on the remote.
+
+This file is kept byte-identical in the GitHub and GitLab example
+repositories; when changing it, apply the same change in the other one.
 """
 
 import argparse
 import hashlib
 import json
+import os
 import re
 import subprocess
 import sys
@@ -317,7 +321,7 @@ def check_change(status, path, published):
 def validate(base_ref):
     changes = changed_files(base_ref)
     if not changes:
-        print("No changes to validate.")
+        warn_no_submissions()
         return 0
 
     has_submissions = any(SUBMISSION_RE.match(p) and s != "M" for s, p in changes)
@@ -330,6 +334,7 @@ def validate(base_ref):
         require_sysand()
 
     rejected = 0
+    reported = 0
     with index_worktree() if dry_run else nullcontext():
         published = published_digests() if dry_run else None
         for status, path in changes:
@@ -338,8 +343,24 @@ def validate(base_ref):
                 continue
             ok, message = result
             print(f"{'ok' if ok else 'FAIL':<4}  {path}: {message}")
+            reported += 1
             rejected += not ok
+    if not reported:
+        warn_no_submissions()
     return 1 if rejected else 0
+
+
+def warn_no_submissions():
+    """A change without submissions is fine (docs, automation), but a
+    contributor whose .kpar never made it into the change would otherwise
+    see a green check and a merge that publishes nothing."""
+    message = (
+        "No package submissions found - if you meant to publish, "
+        f"check that your .kpar file was added under {KPARS_DIR}/."
+    )
+    print(message)
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        print(f"::warning::{message}")  # surfaces as an annotation on GitHub
 
 
 # --- entry point -----------------------------------------------------------
