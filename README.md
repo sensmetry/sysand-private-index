@@ -35,7 +35,7 @@ and the project to install):
 ```sh
 export SYSAND_CRED_TEAMIDX="https://raw.githubusercontent.com/YOUR-ORG/YOUR-INDEX/refs/heads/index/**"
 export SYSAND_CRED_TEAMIDX_BEARER_TOKEN="<read token>"
-sysand add pkg:sysand/<publisher>/<project> --index "https://raw.githubusercontent.com/YOUR-ORG/YOUR-INDEX/refs/heads/index/"
+sysand add <publisher>/<project> --index "https://raw.githubusercontent.com/YOUR-ORG/YOUR-INDEX/refs/heads/index/"
 ```
 
 The `SYSAND_CRED_*` variables are how `sysand` takes credentials; see
@@ -74,7 +74,7 @@ handles the rest.
    `sysand build` produced it:
 
    ```sh
-   cp path/to/my_project-1.0.0.kpar kpars/
+   cp path/to/my-project-1.0.0.kpar kpars/
    ```
 
 3. Commit, push, and open a pull request:
