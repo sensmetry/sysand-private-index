@@ -21,6 +21,6 @@ jobs:
           python-version: "3.14"
       - name: Install sysand
         # Needed for the publish dry-run; pin the same version as the index-writer.
-        run: pipx install sysand==0.1.5
+        run: pipx install sysand==0.1.6
       - name: Validate submissions
         run: ./manage_index.py validate "origin/${{ github.base_ref }}"

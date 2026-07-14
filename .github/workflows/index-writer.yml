@@ -26,7 +26,7 @@ jobs:
 
       - name: Install sysand
         # Adjust to how you distribute sysand internally; pin the version.
-        run: pipx install sysand==0.1.5
+        run: pipx install sysand==0.1.6
 
       - name: Reconcile index with kpars/
         run: ./manage_index.py reconcile
