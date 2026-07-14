@@ -1,0 +1,12 @@
+{
+  "index": {
+    "Example2": "example.sysml"
+  },
+  "created": "2026-07-14T12:51:47Z",
+  "checksum": {
+    "example.sysml": {
+      "value": "0e43f80d4ff333acb5aa37a8f8e4ccaf62501c29fe4a1bea73a66e1e9ac2268b",
+      "algorithm": "SHA256"
+    }
+  }
+}

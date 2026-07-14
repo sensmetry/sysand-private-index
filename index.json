@@ -1,3 +1,10 @@
 {
-  "projects": []
+  "projects": [
+    {
+      "iri": "pkg:sysand/example-publisher-1/example-project-1"
+    },
+    {
+      "iri": "pkg:sysand/example-publisher-2/example-project-2"
+    }
+  ]
 }

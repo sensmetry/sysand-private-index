@@ -1,0 +1,17 @@
+{
+  "versions": [
+    {
+      "version": "0.0.1",
+      "usage": [
+        {
+          "resource": "pkg:sysand/example-publisher-1/example-project-1"
+        },
+        {
+          "resource": "pkg:sysand/sensmetry/detect"
+        }
+      ],
+      "kpar_size": 1427,
+      "kpar_digest": "sha256:8899a8cbf3dcf506d304b63ee2235dea73ac511074097bcdfd6901cc53d3a916"
+    }
+  ]
+}

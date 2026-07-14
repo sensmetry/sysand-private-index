@@ -1,0 +1,14 @@
+{
+  "name": "example-project-2",
+  "publisher": "Example Publisher 2",
+  "version": "0.0.1",
+  "license": "MIT",
+  "usage": [
+    {
+      "resource": "pkg:sysand/example-publisher-1/example-project-1"
+    },
+    {
+      "resource": "pkg:sysand/sensmetry/detect"
+    }
+  ]
+}
